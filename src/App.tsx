@@ -1,5 +1,5 @@
 import { useEffect } from 'preact/hooks'
-import { LocationProvider, Router } from 'preact-iso'
+import { LocationProvider, Router, Route } from 'preact-iso'
 import { supabase } from './lib/supabase'
 import { currentUser, authLoading } from './store/auth'
 import { Login } from './pages/Login'
@@ -32,8 +32,8 @@ export function App() {
     <LocationProvider>
       <Layout>
         <Router>
-          <Home path="/" />
-          <Projects path="/projects" />
+          <Route path="/" component={Home} />
+          <Route path="/projects" component={Projects} />
         </Router>
       </Layout>
     </LocationProvider>
