@@ -1,0 +1,6 @@
+name = "timesh1t-ai"
+main = "cloudflare-ai.ts"
+compatibility_date = "2026-06-11"
+
+[ai]
+binding = "AI"

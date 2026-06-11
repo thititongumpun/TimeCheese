@@ -42,31 +42,46 @@ function renderTable(overrides: Partial<Parameters<typeof TimesheetTable>[0]> = 
 }
 
 describe('TimesheetTable', () => {
-  it('bundles row actions in an actions menu', () => {
+  it('opens row actions in a modal outside the table overflow container', () => {
     renderTable()
 
-    expect(screen.getByRole('button', { name: 'Actions for Prepare client report' })).toBeInTheDocument()
-    expect(screen.getAllByText('Edit')).toHaveLength(2)
-    expect(screen.getAllByText('Delete')).toHaveLength(2)
+    const trigger = screen.getByRole('button', { name: 'Actions for Prepare client report' })
+    fireEvent.click(trigger)
+
+    const dialog = screen.getByRole('dialog', { name: 'Timesheet actions' })
+    expect(dialog).toBeInTheDocument()
+    expect(trigger.closest('.overflow-x-auto')).not.toContainElement(dialog)
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
   })
 
   it('copies a row AI summary', () => {
     const props = renderTable()
 
-    fireEvent.click(screen.getAllByText('Copy AI summary')[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Prepare client report' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy AI summary' }))
 
     expect(props.onCopySummary).toHaveBeenCalledWith('Prepared the weekly client report.')
-    expect(screen.getAllByText('Copy AI summary')[1]).toBeDisabled()
   })
 
   it('toggles completion with the correct action label', () => {
     const props = renderTable()
 
-    fireEvent.click(screen.getByText('Mark done'))
-    fireEvent.click(screen.getByText('Mark incomplete'))
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Prepare client report' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mark done' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Internal meeting' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mark incomplete' }))
 
     expect(props.onToggleComplete).toHaveBeenNthCalledWith(1, timesheets[0])
     expect(props.onToggleComplete).toHaveBeenNthCalledWith(2, timesheets[1])
+  })
+
+  it('renders AI summaries as wrapped readable text', () => {
+    renderTable()
+
+    const summary = screen.getByText('Prepared the weekly client report.')
+    expect(summary).toHaveClass('whitespace-pre-wrap')
+    expect(summary).not.toHaveClass('line-clamp-1')
   })
 
   it('renders the empty state', () => {

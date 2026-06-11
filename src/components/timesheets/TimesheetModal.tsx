@@ -28,12 +28,17 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
       project_id: projectId || null,
       is_complete: isComplete,
     }
-    const { error } = timesheet
-      ? await updateTimesheet(timesheet.id, payload)
-      : await createTimesheet(payload)
-    if (error) setError(error.message)
-    else onClose()
-    setLoading(false)
+    try {
+      const { error } = timesheet
+        ? await updateTimesheet(timesheet.id, payload)
+        : await createTimesheet(payload)
+      if (error) setError(error.message)
+      else onClose()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not create the timesheet.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

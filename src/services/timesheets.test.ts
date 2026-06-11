@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockFrom = vi.hoisted(() => vi.fn())
+const mockSummarizeDescription = vi.hoisted(() => vi.fn())
 vi.mock('../lib/supabase', () => ({
   supabase: { from: mockFrom },
+}))
+vi.mock('./cloudflare-ai', () => ({
+  summarizeDescription: mockSummarizeDescription,
 }))
 
 import {
@@ -36,7 +40,10 @@ const emptyFilters: TimesheetFilters = {
 }
 
 describe('timesheets service', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSummarizeDescription.mockResolvedValue('AI-generated summary')
+  })
 
   it('fetchTimesheets selects with project join ordered by date_memo desc', async () => {
     const chain = makeChain({ data: [], error: null })
@@ -94,19 +101,39 @@ describe('timesheets service', () => {
     expect(chain.eq).toHaveBeenCalledWith('is_complete', false)
   })
 
-  it('createTimesheet inserts and returns single row', async () => {
+  it('createTimesheet summarizes the description before inserting', async () => {
     const chain = makeChain({ data: { id: '1' }, error: null })
     mockFrom.mockReturnValue(chain)
 
-    await createTimesheet({
+    const input = {
       date_memo: '2026-06-11',
       description: 'Did stuff',
       project_id: null,
       is_complete: false,
-    })
+    }
+    await createTimesheet(input)
 
-    expect(chain.insert).toHaveBeenCalled()
+    expect(mockSummarizeDescription).toHaveBeenCalledWith('Did stuff')
+    expect(chain.insert).toHaveBeenCalledWith({
+      ...input,
+      ai_summary: 'AI-generated summary',
+    })
     expect(chain.single).toHaveBeenCalled()
+  })
+
+  it('does not insert when Cloudflare AI fails', async () => {
+    const chain = makeChain({ data: null, error: null })
+    mockFrom.mockReturnValue(chain)
+    mockSummarizeDescription.mockRejectedValue(new Error('Cloudflare AI request failed.'))
+
+    await expect(createTimesheet({
+      date_memo: '2026-06-11',
+      description: 'Did stuff',
+      project_id: null,
+      is_complete: false,
+    })).rejects.toThrow('Cloudflare AI request failed.')
+
+    expect(chain.insert).not.toHaveBeenCalled()
   })
 
   it('updateTimesheet applies update by id', async () => {
