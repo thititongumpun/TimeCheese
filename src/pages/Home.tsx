@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
-import { fetchTimesheets, deleteTimesheet } from '../services/timesheets'
+import { writeText } from '@tauri-apps/plugin-clipboard-manager'
+import { fetchTimesheets, deleteTimesheet, updateTimesheet } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
 import { TimesheetTable } from '../components/timesheets/TimesheetTable'
 import { TimesheetFilters } from '../components/timesheets/TimesheetFilters'
@@ -26,6 +27,8 @@ export function Home() {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetWithProject | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
 
   async function loadTimesheets() {
     setLoading(true)
@@ -57,6 +60,38 @@ export function Home() {
     else loadTimesheets()
   }
 
+  async function handleCopySummary(summary: string) {
+    setActionMessage(null)
+    try {
+      await writeText(summary)
+      setActionMessage('AI summary copied.')
+    } catch {
+      setError('Could not copy the AI summary.')
+    }
+  }
+
+  async function handleToggleComplete(timesheet: TimesheetWithProject) {
+    const isComplete = !timesheet.is_complete
+    setUpdatingId(timesheet.id)
+    setActionMessage(null)
+    const { error } = await updateTimesheet(timesheet.id, { is_complete: isComplete })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setError(null)
+      setTimesheets((current) => current
+        .map((item) => item.id === timesheet.id ? { ...item, is_complete: isComplete } : item)
+        .filter((item) => {
+          if (filters.status === 'complete') return item.is_complete
+          if (filters.status === 'incomplete') return !item.is_complete
+          return true
+        }))
+      setActionMessage(isComplete ? 'Timesheet marked done.' : 'Timesheet marked incomplete.')
+    }
+    setUpdatingId(null)
+  }
+
   function handleModalClose() {
     setModalOpen(false)
     setEditingTimesheet(null)
@@ -79,6 +114,11 @@ export function Home() {
           <span>{error}</span>
         </div>
       )}
+      {actionMessage && (
+        <div class="alert alert-success mb-4" role="status">
+          <span>{actionMessage}</span>
+        </div>
+      )}
       <TimesheetFilters filters={filters} projects={projects} onChange={setFilters} />
       {loading ? (
         <div class="flex justify-center py-8">
@@ -89,6 +129,9 @@ export function Home() {
           timesheets={timesheets}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onCopySummary={handleCopySummary}
+          onToggleComplete={handleToggleComplete}
+          updatingId={updatingId}
         />
       )}
       {modalOpen && (

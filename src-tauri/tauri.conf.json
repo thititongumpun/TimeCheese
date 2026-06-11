@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "TimeSh1t",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "identifier": "com.thiti.timesh1t",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -13,8 +13,11 @@
     "windows": [
       {
         "title": "TimeSh1t",
-        "width": 800,
-        "height": 600
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true
       }
     ],
     "security": {
@@ -23,6 +26,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -31,5 +35,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/thititongumpun/TimeSh1t/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkwRjc0MDNDN0Q5RDVFQTAKUldTZ1hwMTlQRUQza0tUS3ZKdG41WlZmNjN1TjRXaUlJb0RKNHR6bXl3ZGJiS3NpSUZneThCcE0K"
+    }
   }
 }
