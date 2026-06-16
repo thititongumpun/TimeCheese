@@ -9,10 +9,19 @@ Rules:
 - Return ONLY the corrected text. No explanation, no preamble.
 
 Example input:
-[INVX] update innovest x cluster
+1. [INVX] update innovest x cluster
+2. [IMP][PersonnelCost] 
+- Conduct SIT tests with HISRCC/ cont.
+- Capture Result HISRCC  SIT test cases.
+- Produce SIT negative (FAIL) test cases HISCUH/HISRCC clients.
 Example output:
-[INVX]
-- update innovest x cluster`
+1. [INVX]
+- update innovest x cluster
+2. [IMP][PersonnelCost]
+- Conduct SIT tests with HISRCC/cont.
+- Capture results of HISRCC SIT test cases.
+- Produce SIT negative (FAIL) test cases for HISCUH/HISRCC clients.
+`
 
 interface AiBinding {
   run: (

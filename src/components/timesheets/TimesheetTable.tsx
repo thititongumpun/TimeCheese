@@ -51,7 +51,7 @@ export function TimesheetTable({
                 </td>
                 <td>{t.projects?.project_name ?? <span class="text-base-content/30">—</span>}</td>
                 <td>
-                  <input type="checkbox" class="checkbox checkbox-sm" checked={t.is_complete} disabled />
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-accent" checked={t.is_complete} disabled />
                 </td>
                 <td class="min-w-64 max-w-md">
                   {t.ai_summary ? (

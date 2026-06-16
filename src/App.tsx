@@ -6,6 +6,7 @@ import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Projects } from './pages/Projects'
 import { Archived } from './pages/Archived'
+import { Holiday } from './pages/Holiday'
 import { Layout } from './components/Layout'
 
 export function App() {
@@ -36,6 +37,7 @@ export function App() {
           <Route path="/" component={Home} />
           <Route path="/projects" component={Projects} />
           <Route path="/archived" component={Archived} />
+          <Route path="/holiday" component={Holiday} />
         </Router>
       </Layout>
     </LocationProvider>
