@@ -19,15 +19,19 @@ export async function fetchTimesheets(filters: TimesheetFilters) {
   return query.order('date_memo', { ascending: false })
 }
 
-export async function fetchArchivedTimesheets(page: number, pageSize: number) {
+// from/to are 'YYYY-MM-DD', both inclusive. Returns every archived row in range (no pagination).
+export async function fetchArchivedTimesheetsInRange(from: string, to: string) {
   const userId = await getAuthenticatedUserId()
-  const from = page * pageSize
+  const [y, m, d] = to.split('-').map(Number)
+  const end = new Date(y, m - 1, d + 1) // exclusive upper bound — covers the whole `to` day
+  const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
   return supabase
     .from('archived_timesheets')
-    .select('*, projects(project_name, project_no)', { count: 'exact' })
+    .select('*, projects(project_name, project_no)')
     .eq('user_id', userId)
-    .order('date_memo', { ascending: false })
-    .range(from, from + pageSize - 1)
+    .gte('date_memo', from)
+    .lt('date_memo', endStr)
+    .order('date_memo', { ascending: true })
 }
 
 export async function createTimesheet(data: TimesheetInput) {
@@ -47,4 +51,8 @@ export async function updateTimesheet(id: string, data: Partial<TimesheetInput>)
 
 export async function deleteTimesheet(id: string) {
   return supabase.from('timesheets').delete().eq('id', id)
+}
+
+export async function updateTimesheets(ids: string[], data: Partial<TimesheetInput>) {
+  return supabase.from('timesheets').update(data).in('id', ids).select()
 }

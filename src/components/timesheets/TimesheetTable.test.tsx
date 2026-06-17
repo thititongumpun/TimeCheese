@@ -36,6 +36,9 @@ function renderTable(overrides: Partial<Parameters<typeof TimesheetTable>[0]> = 
     onCopyDescription: vi.fn(),
     onCopySummary: vi.fn(),
     onToggleComplete: vi.fn(),
+    selectedIds: new Set<string>(),
+    onToggleSelect: vi.fn(),
+    onToggleSelectAll: vi.fn(),
     ...overrides,
   }
   render(<TimesheetTable {...props} />)
@@ -77,12 +80,15 @@ describe('TimesheetTable', () => {
     expect(props.onToggleComplete).toHaveBeenNthCalledWith(2, timesheets[1])
   })
 
-  it('renders AI summaries as wrapped readable text', () => {
+  it('renders AI summaries clamped and click-to-expand', () => {
     renderTable()
 
     const summary = screen.getByText('Prepared the weekly client report.')
-    expect(summary).toHaveClass('whitespace-pre-wrap')
-    expect(summary).not.toHaveClass('line-clamp-1')
+    expect(summary).toHaveClass('line-clamp-3')
+    expect(summary).toHaveClass('cursor-pointer')
+
+    fireEvent.click(summary)
+    expect(summary).not.toHaveClass('line-clamp-3')
   })
 
   it('renders the empty state', () => {

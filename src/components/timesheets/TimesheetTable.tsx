@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
 import type { TimesheetWithProject } from '../../types'
+import { ExpandableText } from '../ExpandableText'
 
 interface Props {
   timesheets: TimesheetWithProject[]
@@ -9,6 +10,9 @@ interface Props {
   onCopySummary: (summary: string) => void
   onToggleComplete: (t: TimesheetWithProject) => void
   updatingId?: string | null
+  selectedIds: Set<string>
+  onToggleSelect: (id: string) => void
+  onToggleSelectAll: (checked: boolean) => void
 }
 
 export function TimesheetTable({
@@ -19,6 +23,9 @@ export function TimesheetTable({
   onCopySummary,
   onToggleComplete,
   updatingId,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }: Props) {
   const [actionTimesheet, setActionTimesheet] = useState<TimesheetWithProject | null>(null)
 
@@ -32,6 +39,16 @@ export function TimesheetTable({
         <table class="table table-zebra">
           <thead>
             <tr>
+              <th class="w-px">
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  aria-label="Select all timesheets"
+                  checked={selectedIds.size === timesheets.length}
+                  indeterminate={selectedIds.size > 0 && selectedIds.size < timesheets.length}
+                  onChange={(e) => onToggleSelectAll((e.target as HTMLInputElement).checked)}
+                />
+              </th>
               <th>Date</th>
               <th>Description</th>
               <th>Project</th>
@@ -42,12 +59,21 @@ export function TimesheetTable({
           </thead>
           <tbody>
             {timesheets.map((t) => (
-              <tr key={t.id}>
+              <tr key={t.id} class={selectedIds.has(t.id) ? 'bg-base-200' : undefined}>
+                <td class="w-px">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    aria-label={`Select ${t.description}`}
+                    checked={selectedIds.has(t.id)}
+                    onChange={() => onToggleSelect(t.id)}
+                  />
+                </td>
                 <td class="whitespace-nowrap">
                   {new Date(t.date_memo).toLocaleDateString()}
                 </td>
                 <td class="max-w-xs">
-                  <span class="line-clamp-2 cursor-help hover:line-clamp-none">{t.description}</span>
+                  <ExpandableText text={t.description} clampClass="line-clamp-2" />
                 </td>
                 <td>{t.projects?.project_name ?? <span class="text-base-content/30">—</span>}</td>
                 <td>
@@ -55,9 +81,11 @@ export function TimesheetTable({
                 </td>
                 <td class="min-w-64 max-w-md">
                   {t.ai_summary ? (
-                    <p class="line-clamp-3 cursor-help text-sm leading-relaxed text-base-content/70 hover:line-clamp-none">
-                      {t.ai_summary}
-                    </p>
+                    <ExpandableText
+                      text={t.ai_summary}
+                      clampClass="line-clamp-3"
+                      class="text-sm leading-relaxed text-base-content/70"
+                    />
                   ) : (
                     <span class="text-base-content/30">—</span>
                   )}

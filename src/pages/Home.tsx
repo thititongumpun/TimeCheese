@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { fetchTimesheets, deleteTimesheet, updateTimesheet } from '../services/timesheets'
+import { fetchTimesheets, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
 import { confirmDialog } from '../lib/confirm'
 import { TimesheetTable } from '../components/timesheets/TimesheetTable'
@@ -35,6 +35,7 @@ export function Home() {
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetWithProject | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   async function loadTimesheets() {
     setLoading(true)
@@ -42,6 +43,7 @@ export function Home() {
     const { data, error } = await fetchTimesheets(filters)
     if (error) setError(error.message)
     else setTimesheets((data as TimesheetWithProject[]) ?? [])
+    setSelectedIds(new Set())
     setLoading(false)
   }
 
@@ -105,6 +107,31 @@ export function Home() {
     setUpdatingId(null)
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    setSelectedIds(checked ? new Set(timesheets.map((t) => t.id)) : new Set())
+  }
+
+  async function handleMarkSelectedDone() {
+    const ids = [...selectedIds]
+    setActionMessage(null)
+    const { error } = await updateTimesheets(ids, { is_complete: true })
+    if (error) {
+      setError(error.message)
+      return
+    }
+    setError(null)
+    setActionMessage(`${ids.length} timesheet${ids.length === 1 ? '' : 's'} marked done.`)
+    loadTimesheets()
+  }
+
   function handleModalClose() {
     setModalOpen(false)
     setEditingTimesheet(null)
@@ -133,6 +160,17 @@ export function Home() {
         </div>
       )}
       <TimesheetFilters filters={filters} projects={projects} onChange={setFilters} />
+      {selectedIds.size > 0 && (
+        <div class="mb-4 flex items-center gap-3 rounded-lg bg-base-200 px-4 py-2">
+          <span class="text-sm">{selectedIds.size} selected</span>
+          <button class="btn btn-primary btn-sm" onClick={handleMarkSelectedDone}>
+            Mark done
+          </button>
+          <button class="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())}>
+            Clear
+          </button>
+        </div>
+      )}
       {loading ? (
         <div class="flex justify-center py-8">
           <span class="loading loading-spinner loading-md" />
@@ -146,6 +184,9 @@ export function Home() {
           onCopySummary={(s) => handleCopy(s, 'AI summary')}
           onToggleComplete={handleToggleComplete}
           updatingId={updatingId}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
         />
       )}
       {modalOpen && (

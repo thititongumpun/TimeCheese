@@ -1,7 +1,7 @@
 {
   "name": "timesh1t",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,11 +16,14 @@
     "@supabase/supabase-js": "^2.108.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "preact": "^10.25.1",
-    "preact-iso": "^2.12.0"
+    "preact-iso": "^2.12.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.3",

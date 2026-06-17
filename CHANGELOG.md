@@ -3,6 +3,12 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [1.1.0] - 2026-06-17
+
+- Bulk-select timesheets on the Home page with a "Mark done" action for all selected rows.
+- Export archived timesheets to XLSX, filtered by a 26th→25th cutoff billing period (start/end month).
+- Click-to-expand (accordion) for long description / AI summary text, replacing the hover behavior.
+
 ## [1.0.0] - 2026-06-17
 
 - Online presence in the sidebar (Supabase Realtime) — live count and names of who's online.

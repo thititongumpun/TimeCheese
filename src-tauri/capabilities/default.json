@@ -10,6 +10,11 @@
     "opener:default",
     "process:default",
     "updater:default",
-    "clipboard-manager:allow-write-text"
+    "clipboard-manager:allow-write-text",
+    "dialog:allow-save",
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$HOME/**" }]
+    }
   ]
 }
