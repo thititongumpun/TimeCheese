@@ -47,7 +47,7 @@ export function TimesheetTable({
                   {new Date(t.date_memo).toLocaleDateString()}
                 </td>
                 <td class="max-w-xs">
-                  <span class="line-clamp-2 cursor-help" title={t.description}>{t.description}</span>
+                  <span class="line-clamp-2 cursor-help hover:line-clamp-none">{t.description}</span>
                 </td>
                 <td>{t.projects?.project_name ?? <span class="text-base-content/30">—</span>}</td>
                 <td>
@@ -55,7 +55,7 @@ export function TimesheetTable({
                 </td>
                 <td class="min-w-64 max-w-md">
                   {t.ai_summary ? (
-                    <p class="line-clamp-3 cursor-help text-sm leading-relaxed text-base-content/70" title={t.ai_summary}>
+                    <p class="line-clamp-3 cursor-help text-sm leading-relaxed text-base-content/70 hover:line-clamp-none">
                       {t.ai_summary}
                     </p>
                   ) : (
