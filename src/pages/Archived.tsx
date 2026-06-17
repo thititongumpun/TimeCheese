@@ -26,6 +26,13 @@ export function Archived() {
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  // page numbers to render: first, last, current ±1, with '…' gaps
+  const pageItems: (number | '…')[] = []
+  for (let i = 0; i < pageCount; i++) {
+    if (i === 0 || i === pageCount - 1 || Math.abs(i - page) <= 1) pageItems.push(i)
+    else if (pageItems[pageItems.length - 1] !== '…') pageItems.push('…')
+  }
+
   return (
     <div>
       <h1 class="text-2xl font-bold mb-4">Archived</h1>
@@ -57,14 +64,14 @@ export function Archived() {
                 {rows.map((t) => (
                   <tr key={t.id}>
                     <td class="whitespace-nowrap">{new Date(t.date_memo).toLocaleDateString()}</td>
-                    <td class="max-w-xs"><span class="line-clamp-2">{t.description}</span></td>
+                    <td class="max-w-xs"><span class="line-clamp-2 cursor-help hover:line-clamp-none">{t.description}</span></td>
                     <td>{t.projects?.project_name ?? <span class="text-base-content/30">—</span>}</td>
                     <td>
                       <input type="checkbox" class="checkbox checkbox-sm" checked={t.is_complete} disabled />
                     </td>
                     <td class="min-w-64 max-w-md">
                       {t.ai_summary ? (
-                        <p class="whitespace-pre-wrap text-sm leading-relaxed text-base-content/70">{t.ai_summary}</p>
+                        <p class="line-clamp-3 cursor-help text-sm leading-relaxed text-base-content/70 hover:line-clamp-none">{t.ai_summary}</p>
                       ) : (
                         <span class="text-base-content/30">—</span>
                       )}
@@ -86,7 +93,19 @@ export function Archived() {
               >
                 «
               </button>
-              <button class="btn btn-sm join-item">{page + 1}</button>
+              {pageItems.map((item, i) =>
+                item === '…' ? (
+                  <button key={`gap-${i}`} class="btn btn-sm join-item btn-disabled">…</button>
+                ) : (
+                  <button
+                    key={item}
+                    class={`btn btn-sm join-item${item === page ? ' btn-active' : ''}`}
+                    onClick={() => setPage(item)}
+                  >
+                    {item + 1}
+                  </button>
+                ),
+              )}
               <button
                 class="btn btn-sm join-item"
                 disabled={page + 1 >= pageCount}

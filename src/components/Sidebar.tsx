@@ -6,6 +6,7 @@ import { relaunch } from '@tauri-apps/plugin-process'
 import packageJson from '../../package.json'
 import { signOut, updateProfile } from '../services/auth'
 import { currentUser } from '../store/auth'
+import { onlineUsers } from '../store/presence'
 import { applyTheme, getStoredTheme, type ThemeMode } from '../lib/theme'
 
 export function Sidebar() {
@@ -18,6 +19,7 @@ export function Sidebar() {
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [installingUpdate, setInstallingUpdate] = useState(false)
   const user = currentUser.value
+  const online = onlineUsers.value
   const email = user?.email ?? 'Signed-in user'
   const displayName = user?.user_metadata?.full_name
     ?? user?.user_metadata?.name
@@ -124,6 +126,17 @@ export function Sidebar() {
           </li>
         </ul>
       </nav>
+      <div class="px-3 pb-1">
+        <div class="flex items-center gap-2 px-2 py-1 text-sm opacity-80">
+          <span class="inline-block h-2 w-2 rounded-full bg-success" />
+          {online.length} online
+        </div>
+        <ul class="mt-1 max-h-40 overflow-y-auto px-2 text-xs opacity-70">
+          {online.map((u) => (
+            <li key={u.email} class="truncate py-0.5" title={u.email}>{u.name}</li>
+          ))}
+        </ul>
+      </div>
       <div class="p-3">
         <button
           class="btn btn-ghost h-auto min-h-0 w-full justify-start gap-3 px-2 py-2"

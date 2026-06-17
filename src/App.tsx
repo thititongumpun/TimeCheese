@@ -2,6 +2,7 @@ import { useEffect } from 'preact/hooks'
 import { LocationProvider, Router, Route } from 'preact-iso'
 import { supabase } from './lib/supabase'
 import { currentUser, authLoading } from './store/auth'
+import { startPresence, stopPresence } from './store/presence'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
 import { Projects } from './pages/Projects'
@@ -12,8 +13,17 @@ import { Layout } from './components/Layout'
 export function App() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      currentUser.value = session?.user ?? null
+      const user = session?.user ?? null
+      currentUser.value = user
       authLoading.value = false
+      if (user) {
+        startPresence({
+          email: user.email ?? 'unknown',
+          name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? (user.email ?? 'unknown').split('@')[0],
+        })
+      } else {
+        stopPresence()
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
