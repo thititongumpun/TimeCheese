@@ -54,6 +54,13 @@ export function Home() {
   useEffect(() => { loadProjects() }, [])
   useEffect(() => { loadTimesheets() }, [filters])
 
+  // ponytail: auto-dismiss the action banner after 5s
+  useEffect(() => {
+    if (!actionMessage) return
+    const id = setTimeout(() => setActionMessage(null), 5000)
+    return () => clearTimeout(id)
+  }, [actionMessage])
+
   function handleEdit(t: TimesheetWithProject) {
     setEditingTimesheet(t)
     setModalOpen(true)

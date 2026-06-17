@@ -4,7 +4,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import packageJson from '../../package.json'
-import { signOut } from '../services/auth'
+import { signOut, updateProfile } from '../services/auth'
 import { currentUser } from '../store/auth'
 import { applyTheme, getStoredTheme, type ThemeMode } from '../lib/theme'
 
@@ -24,6 +24,9 @@ export function Sidebar() {
     ?? email.split('@')[0]
   const avatarUrl = user?.user_metadata?.avatar_url
     ?? user?.user_metadata?.picture
+  const [avatarInput, setAvatarInput] = useState(avatarUrl ?? '')
+  const [savingAvatar, setSavingAvatar] = useState(false)
+  const [avatarStatus, setAvatarStatus] = useState('')
   const initials = displayName
     .split(/\s+/)
     .map((part: string) => part[0])
@@ -36,6 +39,14 @@ export function Sidebar() {
       setVersion(packageJson.version)
     })
   }, [])
+
+  async function saveAvatar() {
+    setSavingAvatar(true)
+    setAvatarStatus('')
+    const { error } = await updateProfile({ avatar_url: avatarInput.trim() })
+    setAvatarStatus(error ? error.message : 'Saved.')
+    setSavingAvatar(false)
+  }
 
   function changeTheme(nextTheme: ThemeMode) {
     setTheme(nextTheme)
@@ -159,6 +170,29 @@ export function Sidebar() {
                 <div class="truncate font-semibold">{displayName}</div>
                 <div class="truncate text-sm opacity-60">{email}</div>
               </div>
+            </div>
+
+            <div class="divider" />
+
+            <div class="form-control">
+              <label class="label" for="avatar-url">
+                <span class="label-text font-medium">Avatar URL</span>
+              </label>
+              <div class="flex gap-2">
+                <input
+                  id="avatar-url"
+                  type="url"
+                  placeholder="https://…"
+                  class="input input-bordered input-sm flex-1"
+                  value={avatarInput}
+                  onInput={(e) => setAvatarInput(e.currentTarget.value)}
+                />
+                <button class="btn btn-sm btn-primary" disabled={savingAvatar} onClick={saveAvatar}>
+                  {savingAvatar && <span class="loading loading-spinner loading-xs" />}
+                  Save
+                </button>
+              </div>
+              {avatarStatus && <div class="mt-2 text-sm opacity-60" role="status">{avatarStatus}</div>}
             </div>
 
             <div class="divider" />

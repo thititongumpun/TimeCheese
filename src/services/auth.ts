@@ -13,6 +13,12 @@ export async function signOut() {
   return { error }
 }
 
+export async function updateProfile(data: { avatar_url?: string; full_name?: string }) {
+  const { data: result, error } = await supabase.auth.updateUser({ data })
+  if (!error && result.user) currentUser.value = result.user
+  return { data: result, error }
+}
+
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession()
   if (!error && data.session) currentUser.value = data.session.user
