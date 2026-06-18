@@ -4,7 +4,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import packageJson from '../../package.json'
-import { signOut, updateProfile } from '../services/auth'
+import { changePassword, signOut, updateProfile } from '../services/auth'
 import { currentUser } from '../store/auth'
 import { onlineUsers } from '../store/presence'
 import { applyTheme, getStoredTheme, type ThemeMode } from '../lib/theme'
@@ -29,6 +29,10 @@ export function Sidebar() {
   const [avatarInput, setAvatarInput] = useState(avatarUrl ?? '')
   const [savingAvatar, setSavingAvatar] = useState(false)
   const [avatarStatus, setAvatarStatus] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [passwordStatus, setPasswordStatus] = useState('')
   const initials = displayName
     .split(/\s+/)
     .map((part: string) => part[0])
@@ -48,6 +52,25 @@ export function Sidebar() {
     const { error } = await updateProfile({ avatar_url: avatarInput.trim() })
     setAvatarStatus(error ? error.message : 'Saved.')
     setSavingAvatar(false)
+  }
+
+  async function savePassword() {
+    // ponytail: 6 is Supabase's default minimum; raise here if you raise it in the dashboard
+    if (newPassword.length < 6) {
+      setPasswordStatus('Password must be at least 6 characters.')
+      return
+    }
+    setSavingPassword(true)
+    setPasswordStatus('')
+    const { error } = await changePassword(email, currentPassword, newPassword)
+    if (error) {
+      setPasswordStatus(error.message)
+    } else {
+      setPasswordStatus('Password changed.')
+      setCurrentPassword('')
+      setNewPassword('')
+    }
+    setSavingPassword(false)
   }
 
   function changeTheme(nextTheme: ThemeMode) {
@@ -206,6 +229,39 @@ export function Sidebar() {
                 </button>
               </div>
               {avatarStatus && <div class="mt-2 text-sm opacity-60" role="status">{avatarStatus}</div>}
+            </div>
+
+            <div class="divider" />
+
+            <div class="form-control">
+              <label class="label" for="new-password">
+                <span class="label-text font-medium">Change password</span>
+              </label>
+              <input
+                id="current-password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Current password"
+                class="input input-bordered input-sm mb-2"
+                value={currentPassword}
+                onInput={(e) => setCurrentPassword(e.currentTarget.value)}
+              />
+              <div class="flex gap-2">
+                <input
+                  id="new-password"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="New password"
+                  class="input input-bordered input-sm flex-1"
+                  value={newPassword}
+                  onInput={(e) => setNewPassword(e.currentTarget.value)}
+                />
+                <button class="btn btn-sm btn-primary" disabled={savingPassword} onClick={savePassword}>
+                  {savingPassword && <span class="loading loading-spinner loading-xs" />}
+                  Save
+                </button>
+              </div>
+              {passwordStatus && <div class="mt-2 text-sm opacity-60" role="status">{passwordStatus}</div>}
             </div>
 
             <div class="divider" />

@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [1.2.0] - 2026-06-18
+
+- Change your password in user settings (re-authenticates with the current password first).
+
 ## [1.1.0] - 2026-06-17
 
 - Bulk-select timesheets on the Home page with a "Mark done" action for all selected rows.
