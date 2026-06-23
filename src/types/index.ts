@@ -1,6 +1,5 @@
 export interface Project {
   id: string
-  user_id: string
   project_no: string
   project_name: string
   is_active: boolean
