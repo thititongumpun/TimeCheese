@@ -6,7 +6,6 @@ import type { Project } from '../../types'
 const mockProjects: Project[] = [
   {
     id: 'p1',
-    user_id: 'u1',
     project_no: 'P001',
     project_name: 'Alpha',
     is_active: true,
@@ -14,7 +13,6 @@ const mockProjects: Project[] = [
   },
   {
     id: 'p2',
-    user_id: 'u1',
     project_no: 'P002',
     project_name: 'Beta',
     is_active: false,

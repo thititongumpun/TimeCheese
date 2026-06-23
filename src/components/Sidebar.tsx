@@ -152,6 +152,11 @@ export function Sidebar() {
               Notes
             </a>
           </li>
+          <li>
+            <a href="/ask" class={url.startsWith('/ask') ? 'active' : ''}>
+              Ask
+            </a>
+          </li>
         </ul>
       </nav>
       <div class="px-3 pb-1">

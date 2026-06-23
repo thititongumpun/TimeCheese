@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockFrom = vi.hoisted(() => vi.fn())
+const mockRpc = vi.hoisted(() => vi.fn())
 const mockSummarizeDescription = vi.hoisted(() => vi.fn())
+const mockEmbedText = vi.hoisted(() => vi.fn())
 const mockGetAuthenticatedUserId = vi.hoisted(() => vi.fn())
 vi.mock('../lib/supabase', () => ({
-  supabase: { from: mockFrom },
+  supabase: { from: mockFrom, rpc: mockRpc },
 }))
 vi.mock('./cloudflare-ai', () => ({
   summarizeDescription: mockSummarizeDescription,
+  embedText: mockEmbedText,
 }))
 vi.mock('./auth-user', () => ({
   getAuthenticatedUserId: mockGetAuthenticatedUserId,
@@ -18,6 +21,7 @@ import {
   createTimesheet,
   updateTimesheet,
   deleteTimesheet,
+  searchArchived,
 } from './timesheets'
 import type { TimesheetFilters } from '../types'
 
@@ -47,7 +51,20 @@ describe('timesheets service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSummarizeDescription.mockResolvedValue('AI-generated summary')
+    mockEmbedText.mockResolvedValue([0.1, 0.2, 0.3])
     mockGetAuthenticatedUserId.mockResolvedValue('user-1')
+  })
+
+  it('searchArchived embeds the query and calls the match RPC', async () => {
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    await searchArchived('database tuning', 5)
+
+    expect(mockEmbedText).toHaveBeenCalledWith('database tuning')
+    expect(mockRpc).toHaveBeenCalledWith('match_archived_timesheets', {
+      query_embedding: [0.1, 0.2, 0.3],
+      match_count: 5,
+    })
   })
 
   it('fetchTimesheets selects with project join ordered by date_memo desc', async () => {

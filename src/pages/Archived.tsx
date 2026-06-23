@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeFile } from '@tauri-apps/plugin-fs'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { fetchArchivedTimesheetsInRange } from '../services/timesheets'
+import { fetchArchivedTimesheetsInRange, searchArchived, indexMissingEmbeddings, type ArchivedMatch } from '../services/timesheets'
 import { ExpandableText } from '../components/ExpandableText'
 import type { TimesheetWithProject } from '../types'
 
@@ -41,8 +41,48 @@ export function Archived() {
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<ArchivedMatch[] | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [indexing, setIndexing] = useState(false)
+  const [indexMsg, setIndexMsg] = useState('')
 
   const { from, to } = periodRange(startMonth, endMonth)
+
+  async function handleSearch(e: Event) {
+    e.preventDefault()
+    const q = query.trim()
+    if (!q) {
+      setResults(null)
+      return
+    }
+    setSearching(true)
+    setError(null)
+    const { data, error } = await searchArchived(q)
+    if (error) setError(error.message)
+    else setResults((data as ArchivedMatch[]) ?? [])
+    setSearching(false)
+  }
+
+  function clearSearch() {
+    setQuery('')
+    setResults(null)
+    setError(null)
+  }
+
+  async function handleIndex() {
+    setIndexing(true)
+    setIndexMsg('')
+    setError(null)
+    try {
+      const { indexed } = await indexMissingEmbeddings((n) => setIndexMsg(`Indexing… ${n} done`))
+      setIndexMsg(indexed === 0 ? 'Everything already indexed.' : `Indexed ${indexed} entr${indexed === 1 ? 'y' : 'ies'}.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not index the archive.')
+    } finally {
+      setIndexing(false)
+    }
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -54,6 +94,18 @@ export function Archived() {
       setLoading(false)
     })
   }, [startMonth, endMonth])
+
+  // Self-healing: embed any newly-archived rows on open. No-op (one cheap query) when nothing's missing.
+  // Silent unless it actually indexes something; the button stays for the initial bulk run / manual retry.
+  useEffect(() => {
+    let cancelled = false
+    indexMissingEmbeddings((n) => { if (!cancelled) setIndexMsg(`Indexing… ${n} done`) })
+      .then(({ indexed }) => {
+        if (!cancelled && indexed > 0) setIndexMsg(`Indexed ${indexed} new entr${indexed === 1 ? 'y' : 'ies'}.`)
+      })
+      .catch(() => { /* worker offline — button stays for manual retry */ })
+    return () => { cancelled = true }
+  }, [])
 
   async function handleExport() {
     if (rows.length === 0) {
@@ -140,14 +192,68 @@ export function Archived() {
           </button>
         </div>
       </div>
-      <p class="mb-4 text-sm opacity-60">
-        Cutoff period: {new Date(from).toLocaleDateString()} – {new Date(to).toLocaleDateString()}
-      </p>
+      <form onSubmit={handleSearch} class="mb-4 flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          class="input input-bordered input-sm flex-1 min-w-48"
+          placeholder="Semantic search archived entries…"
+          value={query}
+          onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+        />
+        <button type="submit" class="btn btn-primary btn-sm" disabled={searching || !query.trim()}>
+          {searching ? <span class="loading loading-spinner loading-xs" /> : 'Search'}
+        </button>
+        {results !== null && (
+          <button type="button" class="btn btn-ghost btn-sm" onClick={clearSearch}>Clear</button>
+        )}
+        <button type="button" class="btn btn-outline btn-sm" disabled={indexing} onClick={handleIndex}>
+          {indexing ? <span class="loading loading-spinner loading-xs" /> : 'Index archive'}
+        </button>
+        {indexMsg && <span class="text-xs opacity-60">{indexMsg}</span>}
+      </form>
       {error && (
         <div class="alert alert-error mb-4">
           <span>{error}</span>
         </div>
       )}
+      {results !== null ? (
+        results.length === 0 ? (
+          <p class="text-base-content/50 py-8 text-center">No matches. Did you click "Index archive" first?</p>
+        ) : (
+          <div class="overflow-x-auto">
+            <table class="table table-zebra">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>AI Summary</th>
+                  <th>Match</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((r) => (
+                  <tr key={r.id}>
+                    <td class="whitespace-nowrap">{new Date(r.date_memo).toLocaleDateString()}</td>
+                    <td class="max-w-xs"><ExpandableText text={r.description} clampClass="line-clamp-2" /></td>
+                    <td class="min-w-64 max-w-md">
+                      {r.ai_summary ? (
+                        <ExpandableText text={r.ai_summary} clampClass="line-clamp-3" class="text-sm leading-relaxed text-base-content/70" />
+                      ) : (
+                        <span class="text-base-content/30">—</span>
+                      )}
+                    </td>
+                    <td class="whitespace-nowrap text-sm opacity-60">{Math.round(r.similarity * 100)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : (
+      <>
+      <p class="mb-4 text-sm opacity-60">
+        Cutoff period: {new Date(from).toLocaleDateString()} – {new Date(to).toLocaleDateString()}
+      </p>
       {loading ? (
         <div class="flex justify-center py-8">
           <span class="loading loading-spinner loading-md" />
@@ -233,6 +339,8 @@ export function Archived() {
             </div>
           </div>
         </>
+      )}
+      </>
       )}
     </div>
   )

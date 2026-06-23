@@ -3,6 +3,19 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [2.0.0] - 2026-06-23
+
+Semantic search, autofill, and AI Q&A over your archived timesheets, powered by
+Supabase pgvector + Cloudflare Workers AI embeddings (bge-m3, multilingual).
+
+- **Archived → Search:** find past entries by meaning, not keywords (Thai + English).
+- **Autofill:** new entries suggest similar past descriptions as you type.
+- **Ask tab:** ask natural-language questions about your history; answers cite the entries they used.
+- Archived entries are embedded automatically on page open; an "Index archive" button backfills the initial bulk.
+
+Requires a one-time Supabase migration (pgvector + `match_archived_timesheets`) and the
+updated Cloudflare Worker (`embed` + `chat` routes).
+
 ## [1.5.1] - 2026-06-23
 
 - Projects are now shared across all users — creating a project no longer ties it to one account.

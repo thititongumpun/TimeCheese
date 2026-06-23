@@ -11,7 +11,7 @@ const filters: Filters = {
 }
 
 const projects: Project[] = [
-  { id: 'p1', user_id: 'u1', project_no: 'P001', project_name: 'Alpha', is_active: true, inserted_at: '' },
+  { id: 'p1', project_no: 'P001', project_name: 'Alpha', is_active: true, inserted_at: '' },
 ]
 
 describe('TimesheetFilters', () => {

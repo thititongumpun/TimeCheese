@@ -1,5 +1,5 @@
-import { useState } from 'preact/hooks'
-import { createTimesheet, updateTimesheet } from '../../services/timesheets'
+import { useState, useEffect } from 'preact/hooks'
+import { createTimesheet, updateTimesheet, searchArchived, type ArchivedMatch } from '../../services/timesheets'
 import type { TimesheetWithProject, Project, TimesheetInput } from '../../types'
 
 interface Props {
@@ -17,6 +17,26 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
   const [isComplete, setIsComplete] = useState(timesheet?.is_complete ?? false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [suggestions, setSuggestions] = useState<ArchivedMatch[]>([])
+
+  // Autofill (new entries only): debounce the description, surface similar past entries.
+  useEffect(() => {
+    if (timesheet) return // editing — don't suggest
+    const q = description.trim()
+    if (q.length < 3) {
+      setSuggestions([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await searchArchived(q, 3)
+        setSuggestions((data as ArchivedMatch[]) ?? [])
+      } catch {
+        setSuggestions([]) // worker offline / unindexed — suggestions are optional
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [description, timesheet])
 
   async function handleSubmit(e: Event) {
     e.preventDefault()
@@ -78,6 +98,25 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               rows={3}
               required
             />
+            {suggestions.length > 0 && (
+              <ul class="menu menu-sm bg-base-200 rounded-box mt-1 p-1">
+                <li class="menu-title text-xs">Similar past entries</li>
+                {suggestions.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      class="text-left"
+                      onClick={() => {
+                        setDescription(s.description)
+                        setSuggestions([])
+                      }}
+                    >
+                      <span class="line-clamp-1">{s.description}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div class="form-control mb-3">
             <label class="label" for="project_id">
