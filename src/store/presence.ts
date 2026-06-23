@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 export interface OnlineUser {
   email: string
   name: string
+  avatar?: string
 }
 
 export const onlineUsers = signal<OnlineUser[]>([])

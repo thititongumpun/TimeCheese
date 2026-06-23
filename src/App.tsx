@@ -21,6 +21,7 @@ export function App() {
         startPresence({
           email: user.email ?? 'unknown',
           name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? (user.email ?? 'unknown').split('@')[0],
+          avatar: user.user_metadata?.avatar_url,
         })
       } else {
         stopPresence()

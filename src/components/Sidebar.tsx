@@ -159,11 +159,19 @@ export function Sidebar() {
           <span class="inline-block h-2 w-2 rounded-full bg-success" />
           {online.length} online
         </div>
-        <ul class="mt-1 max-h-40 overflow-y-auto px-2 text-xs opacity-70">
+        <div class="mt-1 flex flex-wrap gap-1 px-2">
           {online.map((u) => (
-            <li key={u.email} class="truncate py-0.5" title={u.email}>{u.name}</li>
+            <div key={u.email} class="tooltip tooltip-right" data-tip={u.name}>
+              <div class="avatar placeholder">
+                <div class="h-7 w-7 rounded-full bg-neutral text-neutral-content">
+                  {u.avatar
+                    ? <img src={u.avatar} alt={u.name} referrerPolicy="no-referrer" />
+                    : <span class="text-xs">{u.name.slice(0, 2).toUpperCase()}</span>}
+                </div>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
       <div class="p-3">
         <button
