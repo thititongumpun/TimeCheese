@@ -44,6 +44,24 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Extract changelog for this version
+        id: changelog
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Pull the section between "## [<version>]" and the next "## [" heading.
+          body=$(awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" {flag=1; next}
+            flag && /^## \[/ {exit}
+            flag {print}
+          ' CHANGELOG.md | sed '/./,$!d')
+          [ -z "$body" ] && body="See the assets to download this version and install."
+          {
+            echo "body<<__CHANGELOG_EOF__"
+            echo "$body"
+            echo "__CHANGELOG_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and upload Tauri bundles
         uses: tauri-apps/tauri-action@v0.6.2
         env:
@@ -55,7 +73,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "TimeSh1t v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
+          releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true

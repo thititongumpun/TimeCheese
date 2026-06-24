@@ -3,6 +3,12 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.2] - 2026-06-25
+
+- **Update banner fit:** the sidebar "Update" banner no longer overflows the 192px sidebar — shorter label plus truncation.
+- **Real release notes:** the update dialog (and GitHub release) now show the actual changelog for the version instead of the generic "See the assets…" placeholder. The release workflow pulls notes straight from CHANGELOG.md.
+- **Footer:** "developed by thiti_t and claude" on every page.
+
 ## [3.1.1] - 2026-06-25
 
 - **Windows:** no more `cmd` console windows flashing when the app calls `claude` (status checks and Jira actions now spawn with `CREATE_NO_WINDOW`).

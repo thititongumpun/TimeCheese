@@ -192,13 +192,13 @@ export function Sidebar() {
       </div>
 
       {update && (
-        <div class="px-3 pb-1">
+        <div class="px-3 pb-2">
           <button
-            class="btn btn-primary btn-sm w-full justify-start gap-2 normal-case"
+            class="btn btn-primary btn-xs w-full justify-start gap-1 normal-case"
             onClick={() => setUpdateModalOpen(true)}
           >
-            <span class="inline-block h-2 w-2 rounded-full bg-primary-content" />
-            Update available: v{update.version}
+            <span class="inline-block h-2 w-2 shrink-0 rounded-full bg-primary-content" />
+            <span class="min-w-0 truncate">Update v{update.version}</span>
           </button>
         </div>
       )}

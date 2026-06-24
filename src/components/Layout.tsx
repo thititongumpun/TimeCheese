@@ -21,6 +21,9 @@ export function Layout({ children }: LayoutProps) {
         onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 300)}
       >
         {children}
+        <footer class="mt-8 pt-4 text-center text-xs text-base-content/40">
+          developed by thiti_t and claude
+        </footer>
         {showTop && (
           <button
             class="btn btn-circle btn-primary fixed bottom-20 right-6 z-30 shadow-lg"
