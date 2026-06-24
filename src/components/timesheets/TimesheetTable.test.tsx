@@ -36,6 +36,7 @@ function renderTable(overrides: Partial<Parameters<typeof TimesheetTable>[0]> = 
     onCopyDescription: vi.fn(),
     onCopySummary: vi.fn(),
     onToggleComplete: vi.fn(),
+    onMarkDoneAndCloseJira: vi.fn(),
     selectedIds: new Set<string>(),
     onToggleSelect: vi.fn(),
     onToggleSelectAll: vi.fn(),

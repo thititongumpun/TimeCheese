@@ -10,6 +10,7 @@ import { Archived } from './pages/Archived'
 import { Holiday } from './pages/Holiday'
 import { Notes } from './pages/Notes'
 import { Ask } from './pages/Ask'
+import { JiraAssistant } from './pages/JiraAssistant'
 import { Layout } from './components/Layout'
 
 export function App() {
@@ -53,6 +54,7 @@ export function App() {
           <Route path="/holiday" component={Holiday} />
           <Route path="/notes" component={Notes} />
           <Route path="/ask" component={Ask} />
+          <Route path="/jira" component={JiraAssistant} />
         </Router>
       </Layout>
     </LocationProvider>

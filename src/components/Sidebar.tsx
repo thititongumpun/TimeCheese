@@ -18,6 +18,7 @@ export function Sidebar() {
   const [updateStatus, setUpdateStatus] = useState('')
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [installingUpdate, setInstallingUpdate] = useState(false)
+  const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const user = currentUser.value
   const online = onlineUsers.value
   const email = user?.email ?? 'Signed-in user'
@@ -44,6 +45,12 @@ export function Sidebar() {
     getVersion().then(setVersion).catch(() => {
       setVersion(packageJson.version)
     })
+  }, [])
+
+  // Auto-check for an update once on app open. Silent: only surfaces the banner if one
+  // exists. ponytail: no status/spinner noise on startup — fails quietly (e.g. no network).
+  useEffect(() => {
+    check().then(setUpdate).catch(() => {})
   }, [])
 
   async function saveAvatar() {
@@ -157,6 +164,11 @@ export function Sidebar() {
               Ask
             </a>
           </li>
+          <li>
+            <a href="/jira" class={url.startsWith('/jira') ? 'active' : ''}>
+              Jira
+            </a>
+          </li>
         </ul>
       </nav>
       <div class="px-3 pb-1">
@@ -178,6 +190,18 @@ export function Sidebar() {
           ))}
         </div>
       </div>
+
+      {update && (
+        <div class="px-3 pb-1">
+          <button
+            class="btn btn-primary btn-sm w-full justify-start gap-2 normal-case"
+            onClick={() => setUpdateModalOpen(true)}
+          >
+            <span class="inline-block h-2 w-2 rounded-full bg-primary-content" />
+            Update available: v{update.version}
+          </button>
+        </div>
+      )}
       <div class="p-3">
         <button
           class="btn btn-ghost h-auto min-h-0 w-full justify-start gap-3 px-2 py-2"
@@ -354,6 +378,55 @@ export function Sidebar() {
             class="modal-backdrop"
             aria-label="Close settings"
             onClick={() => setSettingsOpen(false)}
+          />
+        </div>
+      )}
+
+      {update && updateModalOpen && (
+        <div class="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="update-title">
+          <div class="modal-box max-w-md">
+            <div class="flex items-center justify-between">
+              <h2 id="update-title" class="text-xl font-bold">Update available</h2>
+              <button
+                class="btn btn-circle btn-ghost btn-sm"
+                aria-label="Close update"
+                onClick={() => setUpdateModalOpen(false)}
+              >
+                X
+              </button>
+            </div>
+
+            <div class="mt-2 text-sm opacity-70">
+              Version {update.version}
+              {update.date && ` · ${update.date.split(' ')[0]}`}
+            </div>
+
+            <div class="divider my-3" />
+
+            <div class="text-sm font-medium">What's new</div>
+            <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-base-200 p-3 text-sm font-sans">
+              {update.body?.trim() || 'No release notes provided.'}
+            </pre>
+
+            {updateStatus && (
+              <div class="mt-3 rounded-lg bg-base-200 p-3 text-sm" role="status">
+                {updateStatus}
+              </div>
+            )}
+
+            <button
+              class="btn btn-primary btn-sm mt-4 w-full"
+              disabled={installingUpdate}
+              onClick={installUpdate}
+            >
+              {installingUpdate && <span class="loading loading-spinner loading-xs" />}
+              Download and install {update.version}
+            </button>
+          </div>
+          <button
+            class="modal-backdrop"
+            aria-label="Close update"
+            onClick={() => setUpdateModalOpen(false)}
           />
         </div>
       )}

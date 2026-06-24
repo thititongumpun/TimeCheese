@@ -9,6 +9,7 @@ interface Props {
   onCopyDescription: (description: string) => void
   onCopySummary: (summary: string) => void
   onToggleComplete: (t: TimesheetWithProject) => void
+  onMarkDoneAndCloseJira: (t: TimesheetWithProject) => void
   updatingId?: string | null
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
@@ -22,6 +23,7 @@ export function TimesheetTable({
   onCopyDescription,
   onCopySummary,
   onToggleComplete,
+  onMarkDoneAndCloseJira,
   updatingId,
   selectedIds,
   onToggleSelect,
@@ -138,6 +140,16 @@ export function TimesheetTable({
                 }}
               >
                 {actionTimesheet.is_complete ? 'Mark incomplete' : 'Mark done'}
+              </button>
+              <button
+                class="btn btn-outline btn-primary justify-start"
+                disabled={updatingId === actionTimesheet.id}
+                onClick={() => {
+                  onMarkDoneAndCloseJira(actionTimesheet)
+                  setActionTimesheet(null)
+                }}
+              >
+                Mark done + close Jira
               </button>
               <button
                 class="btn btn-outline justify-start"

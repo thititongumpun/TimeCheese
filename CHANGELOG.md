@@ -3,6 +3,15 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.0.0] - 2026-06-25
+
+Jira integration and in-app update notifications.
+
+- **Jira tab:** mark work done in Jira from inside TimeSh1t, driven by your local Claude Code CLI + the Atlassian MCP — no Jira token is stored in the app. The tab gates on setup (install Claude Code → add the Atlassian MCP at user scope → authenticate) and only shows the usage panel once `atlassian` reports **Connected**.
+- **"Mark done + close Jira"** per-row action: flips the timesheet `is_complete` in-app (RLS-safe) and asks Claude to transition the matching Jira issue to Done. The two steps are independent — the timesheet still completes if Jira isn't set up.
+- **Live progress:** Claude's steps (which tool it's calling, its reasoning) stream into the UI instead of one opaque spinner.
+- **Update banner:** on launch, the sidebar shows an "Update available" banner under the online-users list; clicking it opens the release notes with one-click download-and-install.
+
 ## [2.0.0] - 2026-06-23
 
 Semantic search, autofill, and AI Q&A over your archived timesheets, powered by

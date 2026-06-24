@@ -60,6 +60,27 @@ npx wrangler deploy
 
 The Worker uses the `AI` binding in `wrangler.toml` and returns the corrected timesheet description as `summary`. `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` are only needed by Wrangler during deployment; do not expose the API token through a `VITE_` environment variable.
 
+## Jira integration (optional, per user)
+
+The **Jira** tab and the per-row "Mark done + close Jira" action drive Jira through each
+user's locally-installed Claude Code CLI — no Jira token is stored in TimeSh1t. The timesheet
+`is_complete` flip happens in-app (RLS-safe); only the Jira transition goes through Claude +
+the Atlassian MCP. Each user sets this up once:
+
+```bash
+# 1. Install Claude Code (https://claude.com/claude-code), then log in:
+claude
+# 2. Add the official Atlassian MCP at USER scope (global — the app spawns claude from its
+#    own directory, so a default local-scoped server would be invisible to it):
+claude mcp add --scope user --transport sse atlassian https://mcp.atlassian.com/v1/sse
+# 3. Authenticate (headless runs can't log in interactively): run `claude`, type `/mcp`,
+#    pick atlassian → Authenticate, finish the browser login. Confirm with:
+claude mcp list   # atlassian should show "Connected"
+```
+
+The Jira tab detects whether the CLI and MCP are present and shows setup steps until ready.
+Without this setup, the timesheet still marks done — only the Jira step is skipped.
+
 ## Releases
 
 Bump the version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, commit, then push a `v*` tag — `.github/workflows/publish.yml` builds and attaches the desktop bundles to the GitHub release.

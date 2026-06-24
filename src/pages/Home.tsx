@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { fetchTimesheets, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
 import { confirmDialog } from '../lib/confirm'
@@ -107,6 +109,45 @@ export function Home() {
     setUpdatingId(null)
   }
 
+  // Two independent steps: flip the timesheet in-app (RLS-safe), then ask the local Claude
+  // CLI to close the Jira issue. The timesheet flip stands even if the Jira step fails.
+  async function handleMarkDoneAndCloseJira(timesheet: TimesheetWithProject) {
+    setUpdatingId(timesheet.id)
+    setError(null)
+    setActionMessage(null)
+
+    if (!timesheet.is_complete) {
+      const { error } = await updateTimesheet(timesheet.id, { is_complete: true })
+      if (error) {
+        setError(error.message)
+        setUpdatingId(null)
+        return
+      }
+      setTimesheets((current) => current
+        .map((item) => item.id === timesheet.id ? { ...item, is_complete: true } : item)
+        .filter((item) => filters.status === 'incomplete' ? !item.is_complete : true))
+    }
+
+    // Live progress from the streaming claude run lands in the action banner.
+    const unlisten = await listen<string>('claude-progress', (ev) => {
+      setActionMessage(`Jira: ${ev.payload}`)
+    })
+    try {
+      const out = await invoke<string>('ask_claude', {
+        prompt: `Find the Jira issue for this work and transition it to Done. Work: "${timesheet.description}"`,
+      })
+      setActionMessage(`Timesheet marked done. Jira: ${out.slice(0, 200) || 'done.'}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(msg === 'CLAUDE_NOT_INSTALLED'
+        ? 'Timesheet marked done. Jira not set up — open the Jira tab to connect Claude Code.'
+        : `Timesheet marked done, but the Jira step failed: ${msg}`)
+    } finally {
+      unlisten()
+      setUpdatingId(null)
+    }
+  }
+
   function toggleSelect(id: string) {
     setSelectedIds((current) => {
       const next = new Set(current)
@@ -183,6 +224,7 @@ export function Home() {
           onCopyDescription={(d) => handleCopy(d, 'Description')}
           onCopySummary={(s) => handleCopy(s, 'AI summary')}
           onToggleComplete={handleToggleComplete}
+          onMarkDoneAndCloseJira={handleMarkDoneAndCloseJira}
           updatingId={updatingId}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
