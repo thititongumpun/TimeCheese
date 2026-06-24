@@ -58,9 +58,11 @@ async fn ask_claude(app: tauri::AppHandle, prompt: String) -> Result<String, Str
                 "--permission-mode",
                 "bypassPermissions",
                 "--append-system-prompt",
-                "You act on Jira via the Atlassian MCP only. Given a description or issue \
-                 key, find the matching Jira issue and transition it to Done. The timesheet \
-                 is handled by the TimeSh1t app — do not touch any database.",
+                "You are a Jira assistant acting through the Atlassian MCP. Do whatever the \
+                 user asks — create issues, edit summary/description/fields, add comments, \
+                 assign, or transition status. Resolve issue keys or search by description \
+                 as needed. Do not touch any database; the timesheet is handled by the \
+                 TimeSh1t app.",
             ])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())

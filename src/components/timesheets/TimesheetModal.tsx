@@ -8,12 +8,21 @@ interface Props {
   onClose: () => void
 }
 
+function projectLabel(p: Project): string {
+  return p.project_no ? `${p.project_no} — ${p.project_name}` : p.project_name
+}
+
 export function TimesheetModal({ timesheet, projects, onClose }: Props) {
   const [dateMemo, setDateMemo] = useState(
     timesheet ? timesheet.date_memo.slice(0, 10) : new Date().toISOString().slice(0, 10)
   )
   const [description, setDescription] = useState(timesheet?.description ?? '')
   const [projectId, setProjectId] = useState(timesheet?.project_id ?? '')
+  // Free-text mirror of the project picker so the native datalist can search by typing.
+  const [projectQuery, setProjectQuery] = useState(() => {
+    const p = projects.find((proj) => proj.id === timesheet?.project_id)
+    return p ? projectLabel(p) : ''
+  })
   const [isComplete, setIsComplete] = useState(timesheet?.is_complete ?? false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -131,20 +140,26 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
             <label class="label" for="project_id">
               <span class="label-text">Project</span>
             </label>
-            <select
+            <input
               id="project_id"
-              class="select select-bordered"
-              value={projectId}
-              onChange={(e) => setProjectId(e.currentTarget.value)}
+              class="input input-bordered"
+              list="project-options"
+              placeholder="Search a project…"
+              value={projectQuery}
+              onInput={(e) => {
+                const value = e.currentTarget.value
+                setProjectQuery(value)
+                // Map the typed/picked label back to a real project id; '' fails validation.
+                const match = projects.find((p) => projectLabel(p) === value)
+                setProjectId(match ? match.id : '')
+              }}
               required
-            >
-              <option value="" disabled>Select a project</option>
+            />
+            <datalist id="project-options">
               {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.project_name}
-                </option>
+                <option key={p.id} value={projectLabel(p)} />
               ))}
-            </select>
+            </datalist>
           </div>
           <div class="form-control mb-4">
             <label class="label cursor-pointer">

@@ -127,7 +127,7 @@ export function JiraAssistant() {
             <textarea
               class="textarea textarea-bordered"
               rows={3}
-              placeholder='e.g. "Transition PROJ-123 to Done" or "close the Jira issue about the login bug"'
+              placeholder='Anything Jira: "Create a task in PROJ: Fix SMTP timeout" · "Add a comment to TPDP-100" · "Update PROJ-12 description" · "Transition PROJ-123 to Done"'
               value={prompt}
               onInput={(e) => setPrompt(e.currentTarget.value)}
             />

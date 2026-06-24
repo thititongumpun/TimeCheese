@@ -3,6 +3,11 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.0] - 2026-06-25
+
+- **General Jira assistant:** the Jira tab now does anything the Atlassian MCP supports — create issues, edit summary/description, add comments, assign, query ("what's assigned to me?"), as well as transition status. (Previously limited to "transition to Done".)
+- **Searchable project picker:** the new-entry modal's project field is now a type-to-search combobox (native datalist) instead of a long scroll-only select.
+
 ## [3.0.0] - 2026-06-25
 
 Jira integration and in-app update notifications.
