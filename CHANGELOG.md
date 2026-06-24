@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.3] - 2026-06-25
+
+- Removed the "developed by thiti_t and claude" page footer.
+
 ## [3.1.2] - 2026-06-25
 
 - **Update banner fit:** the sidebar "Update" banner no longer overflows the 192px sidebar — shorter label plus truncation.
