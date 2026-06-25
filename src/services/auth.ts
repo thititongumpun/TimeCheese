@@ -7,6 +7,21 @@ export async function signIn(email: string, password: string) {
   return { data, error }
 }
 
+// First-time setup: email a 6-digit code to an already-provisioned user.
+// shouldCreateUser:false so only dashboard-created accounts can request one.
+export async function sendSetupCode(email: string) {
+  return supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
+}
+
+// Verify the emailed code (signs them in), then set their chosen password.
+export async function verifyCodeAndSetPassword(email: string, token: string, password: string) {
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+  if (error) return { error }
+  const { data, error: pwError } = await supabase.auth.updateUser({ password })
+  if (!pwError && data.user) currentUser.value = data.user
+  return { error: pwError }
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut()
   if (!error) currentUser.value = null

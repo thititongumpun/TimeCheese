@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.7] - 2026-06-25
+
+- Added a first-time account setup flow on the login screen: provisioned users can email themselves a 6-digit code and choose their own password (no web build or deep linking required).
+
 ## [3.1.6] - 2026-06-25
 
 - Added a monthly timesheet-cutoff warning in the sidebar (above the online list) that appears on the 25th of each month.
