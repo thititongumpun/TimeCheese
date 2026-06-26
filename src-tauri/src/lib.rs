@@ -1,11 +1,35 @@
 use std::io::{BufRead, BufReader, Read};
 use tauri::Emitter;
 
+// A macOS .app launched from Finder/Dock inherits a bare PATH (/usr/bin:/bin:…) with no
+// nvm/Homebrew/npm-global dirs, so `claude` installed there is invisible. Rebuild PATH with
+// the common install locations (nvm is version-glob'd) so detection and spawns find it.
+#[cfg(not(windows))]
+fn augmented_path() -> std::ffi::OsString {
+    use std::path::PathBuf;
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut dirs: Vec<PathBuf> = vec![
+        "/usr/local/bin".into(),
+        "/opt/homebrew/bin".into(),
+        PathBuf::from(&home).join(".local/bin"),
+    ];
+    // nvm: ~/.nvm/versions/node/<version>/bin — add every installed version's bin.
+    if let Ok(entries) = std::fs::read_dir(PathBuf::from(&home).join(".nvm/versions/node")) {
+        dirs.extend(entries.flatten().map(|e| e.path().join("bin")));
+    }
+    let existing = std::env::var_os("PATH").unwrap_or_default();
+    let mut paths: Vec<PathBuf> = std::env::split_paths(&existing).collect();
+    paths.extend(dirs);
+    std::env::join_paths(paths).unwrap_or(existing)
+}
+
 // Build a `claude` command. On Windows, suppress the console window that would otherwise
 // flash on every spawn (CREATE_NO_WINDOW).
 fn claude_command() -> std::process::Command {
     #[allow(unused_mut)]
     let mut cmd = std::process::Command::new("claude");
+    #[cfg(not(windows))]
+    cmd.env("PATH", augmented_path());
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;

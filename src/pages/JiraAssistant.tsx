@@ -90,6 +90,24 @@ export function JiraAssistant() {
               <li>Run <code class="rounded bg-base-300 px-1">claude</code> in a terminal and log in</li>
             </ol>
             <button class="btn btn-primary btn-sm mt-2 w-fit" onClick={checkStatus}>Re-check</button>
+
+            <details class="mt-2 text-sm">
+              <summary class="cursor-pointer opacity-70">Already installed but this keeps showing?</summary>
+              <div class="mt-2 space-y-2 opacity-70">
+                <p>
+                  Confirm it works — run <code class="rounded bg-base-300 px-1">claude --version</code> in
+                  a terminal. If that prints a version, this app just can't see it on its PATH.
+                </p>
+                <p>Fix it (macOS/Linux) — link <code class="rounded bg-base-300 px-1">claude</code> onto the system PATH:</p>
+                <code class="block overflow-x-auto rounded bg-base-300 px-3 py-2 text-xs">
+                  sudo ln -sf "$(which claude)" /usr/local/bin/claude
+                </code>
+                <p>
+                  On Windows, make sure the install folder is in your <span class="font-medium">System</span> PATH.
+                  Then fully quit and reopen this app and click Re-check.
+                </p>
+              </div>
+            </details>
           </div>
         </div>
       )}
