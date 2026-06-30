@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.15] - 2026-06-30
+
+- Holiday calendar now highlights every holiday date from the gist and shows the holiday name when you click/hover the date. Removed the separate holiday list.
+
 ## [3.1.14] - 2026-06-30
 
 - Holiday page now lists all holidays next to the calendar (date + name), so the dates are clearly visible regardless of the month shown; the calendar still marks each holiday day.

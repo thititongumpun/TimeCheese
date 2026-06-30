@@ -2,11 +2,9 @@ import { useRef, useEffect, useState } from 'preact/hooks'
 import { Calendar } from 'vanilla-calendar-pro'
 import 'vanilla-calendar-pro/styles/index.css' // DaisyUI v4 doesn't auto-style .vc (that's v5), so ship the lib's own CSS
 import { fetchHolidays } from '../services/holidays'
-import type { Holiday as HolidayType } from '../types'
 
 export function Holiday() {
   const ref = useRef<HTMLDivElement>(null)
-  const [holidays, setHolidays] = useState<HolidayType[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -15,16 +13,14 @@ export function Holiday() {
     fetchHolidays().then(({ data, error }) => {
       setLoading(false)
       if (error) return setError(error.message)
-      const list = (data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date))
-      setHolidays(list)
-      const popups = Object.fromEntries(
-        list.map((h) => [
-          h.date,
-          { modifier: 'bg-error text-error-content rounded-full', html: h.name },
-        ])
-      )
+      const list = data ?? []
       if (!ref.current) return
-      cal = new Calendar(ref.current, { popups })
+      cal = new Calendar(ref.current, {
+        // highlight every gist date (adds data-vc-date-holiday → styled by the lib)
+        selectedHolidays: list.map((h) => h.date),
+        // click/hover a highlighted date → show its holiday name
+        popups: Object.fromEntries(list.map((h) => [h.date, { html: h.name }])),
+      })
       cal.init()
     })
     return () => cal?.destroy()
@@ -43,26 +39,7 @@ export function Holiday() {
           <span class="loading loading-spinner loading-md" />
         </div>
       ) : (
-        <div class="flex flex-col gap-6 md:flex-row md:items-start">
-          <div ref={ref} />
-          <ul class="menu bg-base-200 rounded-box w-full md:w-96">
-            <li class="menu-title">Holidays</li>
-            {holidays.length === 0 && <li class="px-4 py-2 text-base-content/50">No holidays found.</li>}
-            {holidays.map((h) => (
-              <li key={h.date}>
-                <div class="flex justify-between">
-                  <span>{h.name}</span>
-                  <span class="text-base-content/60 whitespace-nowrap">
-                    {new Date(h.date).toLocaleDateString(undefined, {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <div ref={ref} />
       )}
     </div>
   )
