@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'preact/hooks'
 import { Calendar } from 'vanilla-calendar-pro'
+import 'vanilla-calendar-pro/styles/index.css' // DaisyUI v4 doesn't auto-style .vc (that's v5), so ship the lib's own CSS
 import { fetchHolidays } from '../services/holidays'
 
 export function Holiday() {

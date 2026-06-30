@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.13] - 2026-06-30
+
+- Fixed the Holiday calendar rendering blank: bundled the calendar library's own stylesheet (DaisyUI v4 does not auto-style it).
+
 ## [3.1.12] - 2026-06-30
 
 - Fixed the Holiday calendar failing to load in the desktop app: the holiday data URL now points directly at the raw gist host (no cross-origin redirect, which the webview rejected).
