@@ -5,7 +5,7 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 
 // --scope user makes the server global (visible from any directory). Without it the default
 // `local` scope binds the MCP to one directory, and the app's spawned `claude` can't see it.
-const MCP_ADD_CMD = 'claude mcp add --scope user --transport sse atlassian https://mcp.atlassian.com/v1/sse'
+const MCP_ADD_CMD = 'claude mcp add --scope user --transport http atlassian https://mcp.atlassian.com/v1/mcp'
 
 // Canned query for the "My open tasks" button: everything assigned to me that isn't finished.
 const MY_TASKS_PROMPT =

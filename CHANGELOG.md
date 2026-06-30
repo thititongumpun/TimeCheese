@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.17] - 2026-06-30
+
+- Jira tab: updated the MCP setup command to the new Streamable HTTP endpoint (`--transport http` / `.../v1/mcp`), since Atlassian deprecated the HTTP+SSE endpoint after 30 June 2026.
+
 ## [3.1.16] - 2026-06-30
 
 - Fixed the Holiday page showing a blank/white screen: the calendar mount node is now always rendered, so it exists when the holiday data finishes loading and the calendar initializes.
