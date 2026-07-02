@@ -1,4 +1,4 @@
-# TimeSh1t
+# T1meSh1t
 
 A desktop timesheet tracker built with Tauri 2.0, Preact, and Supabase. Log work entries against projects, mark them complete, browse archived entries, and view the company holiday calendar.
 
@@ -63,7 +63,7 @@ The Worker uses the `AI` binding in `wrangler.toml` and returns the corrected ti
 ## Jira integration (optional, per user)
 
 The **Jira** tab and the per-row "Mark done + close Jira" action drive Jira through each
-user's locally-installed Claude Code CLI — no Jira token is stored in TimeSh1t. The timesheet
+user's locally-installed Claude Code CLI — no Jira token is stored in T1meSh1t. The timesheet
 `is_complete` flip happens in-app (RLS-safe); only the Jira transition goes through Claude +
 the Atlassian MCP. Each user sets this up once:
 

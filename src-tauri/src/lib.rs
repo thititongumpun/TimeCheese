@@ -99,7 +99,7 @@ async fn ask_claude(app: tauri::AppHandle, prompt: String) -> Result<String, Str
                  user asks — create issues, edit summary/description/fields, add comments, \
                  assign, or transition status. Resolve issue keys or search by description \
                  as needed. Do not touch any database; the timesheet is handled by the \
-                 TimeSh1t app.",
+                 T1meSh1t app.",
             ])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())

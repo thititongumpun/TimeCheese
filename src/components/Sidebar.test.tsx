@@ -29,7 +29,7 @@ describe('Sidebar', () => {
 
   it('renders app title and nav links', () => {
     renderSidebar()
-    expect(screen.getByText('TimeSh1t')).toBeInTheDocument()
+    expect(screen.getByText('T1meSh1t')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument()
   })

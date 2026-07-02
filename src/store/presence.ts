@@ -26,6 +26,11 @@ export function startPresence(user: OnlineUser) {
     })
 }
 
+// re-broadcast updated metadata (e.g. a fresh avatar) on the existing channel
+export function updatePresence(user: OnlineUser) {
+  channel?.track(user)
+}
+
 export function stopPresence() {
   if (!channel) return
   supabase.removeChannel(channel)

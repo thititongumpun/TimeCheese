@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "TimeSh1t",
-  "version": "3.1.18",
+  "productName": "T1meSh1t",
+  "version": "3.1.19",
   "identifier": "com.thiti.timesh1t",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "TimeSh1t",
+        "title": "T1meSh1t",
         "width": 1280,
         "height": 800,
         "minWidth": 960,

@@ -60,7 +60,7 @@ export function Login() {
     <div class="min-h-screen flex items-center justify-center bg-base-100">
       <div class="card w-96 bg-base-200 shadow-xl">
         <div class="card-body">
-          <h2 class="card-title text-2xl mb-2">TimeSh1t</h2>
+          <h2 class="card-title text-2xl mb-2">T1meSh1t</h2>
 
           {error && (
             <div class="alert alert-error mb-4">

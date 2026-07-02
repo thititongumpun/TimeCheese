@@ -3,6 +3,11 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.19] - 2026-07-02
+
+- Online-users list now shows the updated avatar: presence is re-broadcast after the server refresh on load and after you save a new avatar (previously it stayed on the cached avatar from sign-in).
+- Renamed the app's display name to **T1meSh1t** (UI, window title, product name, README). Bundle identifier, auto-updater channel, and stored theme are unchanged.
+
 ## [3.1.18] - 2026-07-02
 
 - Sidebar avatar now refreshes from the server on load, so avatar/profile edits made in the Supabase dashboard show up (previously only the cached session's stale metadata was read).

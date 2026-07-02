@@ -6,7 +6,7 @@ import { relaunch } from '@tauri-apps/plugin-process'
 import packageJson from '../../package.json'
 import { changePassword, signOut, updateProfile } from '../services/auth'
 import { currentUser } from '../store/auth'
-import { onlineUsers } from '../store/presence'
+import { onlineUsers, updatePresence } from '../store/presence'
 import { applyTheme, getStoredTheme, type ThemeMode } from '../lib/theme'
 
 export function Sidebar() {
@@ -56,7 +56,13 @@ export function Sidebar() {
   async function saveAvatar() {
     setSavingAvatar(true)
     setAvatarStatus('')
-    const { error } = await updateProfile({ avatar_url: avatarInput.trim() })
+    const { data, error } = await updateProfile({ avatar_url: avatarInput.trim() })
+    // re-broadcast to presence so other online users see the new avatar
+    if (!error && data.user) updatePresence({
+      email: data.user.email ?? 'unknown',
+      name: displayName,
+      avatar: data.user.user_metadata?.avatar_url,
+    })
     setAvatarStatus(error ? error.message : 'Saved.')
     setSavingAvatar(false)
   }
@@ -131,7 +137,7 @@ export function Sidebar() {
 
   return (
     <aside class="w-48 h-screen bg-base-200 flex flex-col">
-      <div class="p-4 font-bold text-xl text-primary">TimeSh1t</div>
+      <div class="p-4 font-bold text-xl text-primary">T1meSh1t</div>
       <nav class="flex-1 px-2">
         <ul class="menu menu-sm">
           <li>
@@ -345,7 +351,7 @@ export function Sidebar() {
             <div>
               <div class="flex items-center justify-between gap-4">
                 <div>
-                  <div class="font-medium">TimeSh1t</div>
+                  <div class="font-medium">T1meSh1t</div>
                   <div class="text-sm opacity-60">Version {version}</div>
                 </div>
                 <button
