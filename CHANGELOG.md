@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [3.1.20] - 2026-07-02
+
+- Fixed Windows auto-update looping after 3.1.19: reverted the installer `productName` back to `TimeSh1t`. NSIS keys the install location and product identity off `productName`, so the 3.1.19 rename made updates install into a new folder while the old version kept launching. The window title/UI branding stays **T1meSh1t**.
+
 ## [3.1.19] - 2026-07-02
 
 - Online-users list now shows the updated avatar: presence is re-broadcast after the server refresh on load and after you save a new avatar (previously it stayed on the cached avatar from sign-in).
