@@ -65,7 +65,7 @@ export function Timeline() {
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold">Timeline</h1>
         <select
-          class="select select-bordered select-sm"
+          class="select select-sm"
           value={year}
           onInput={(e) => setYear(Number((e.target as HTMLSelectElement).value))}
         >

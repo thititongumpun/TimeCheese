@@ -9,37 +9,31 @@ interface Props {
 export function TimesheetFilters({ filters, projects, onChange }: Props) {
   return (
     <div class="flex flex-wrap gap-4 mb-4 items-end">
-      <div class="form-control">
-        <label class="label" for="date_from">
-          <span class="label-text">From</span>
-        </label>
+      <div class="fieldset">
+        <label class="label" for="date_from">From</label>
         <input
           id="date_from"
           type="date"
-          class="input input-bordered input-sm"
+          class="input input-sm"
           value={filters.date_from ?? ''}
           onInput={(e) => onChange({ ...filters, date_from: e.currentTarget.value || null })}
         />
       </div>
-      <div class="form-control">
-        <label class="label" for="date_to">
-          <span class="label-text">To</span>
-        </label>
+      <div class="fieldset">
+        <label class="label" for="date_to">To</label>
         <input
           id="date_to"
           type="date"
-          class="input input-bordered input-sm"
+          class="input input-sm"
           value={filters.date_to ?? ''}
           onInput={(e) => onChange({ ...filters, date_to: e.currentTarget.value || null })}
         />
       </div>
-      <div class="form-control">
-        <label class="label" for="project_filter">
-          <span class="label-text">Project</span>
-        </label>
+      <div class="fieldset">
+        <label class="label" for="project_filter">Project</label>
         <select
           id="project_filter"
-          class="select select-bordered select-sm"
+          class="select select-sm"
           value={filters.project_id ?? ''}
           onChange={(e) => onChange({ ...filters, project_id: e.currentTarget.value || null })}
         >
@@ -51,13 +45,11 @@ export function TimesheetFilters({ filters, projects, onChange }: Props) {
           ))}
         </select>
       </div>
-      <div class="form-control">
-        <label class="label" for="status_filter">
-          <span class="label-text">Status</span>
-        </label>
+      <div class="fieldset">
+        <label class="label" for="status_filter">Status</label>
         <select
           id="status_filter"
-          class="select select-bordered select-sm"
+          class="select select-sm"
           value={filters.status}
           onChange={(e) =>
             onChange({ ...filters, status: e.currentTarget.value as TimesheetFilters['status'] })

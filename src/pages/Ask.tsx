@@ -45,7 +45,7 @@ export function Ask() {
       <form onSubmit={ask} class="mb-6 flex gap-2">
         <input
           type="text"
-          class="input input-bordered flex-1"
+          class="input flex-1"
           placeholder="Ask about your past work…"
           value={question}
           onInput={(e) => setQuestion(e.currentTarget.value)}

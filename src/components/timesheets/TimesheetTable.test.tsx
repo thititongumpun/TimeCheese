@@ -13,6 +13,8 @@ const timesheets: TimesheetWithProject[] = [
     inserted_at: '2026-06-11T00:00:00Z',
     is_complete: false,
     ai_summary: 'Prepared the weekly client report.',
+    start_time: '09:00:00',
+    end_time: '12:00:00',
     projects: { project_name: 'Alpha', project_no: 'P001' },
   },
   {
@@ -24,6 +26,8 @@ const timesheets: TimesheetWithProject[] = [
     inserted_at: '2026-06-10T00:00:00Z',
     is_complete: true,
     ai_summary: null,
+    start_time: null,
+    end_time: null,
     projects: null,
   },
 ]

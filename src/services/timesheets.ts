@@ -25,7 +25,22 @@ export async function fetchTimesheets(filters: TimesheetFilters) {
   if (filters.status === 'complete') query = query.eq('is_complete', true)
   if (filters.status === 'incomplete') query = query.eq('is_complete', false)
 
-  return query.order('date_memo', { ascending: false })
+  return query
+    .order('date_memo', { ascending: false })
+    .order('start_time', { ascending: true, nullsFirst: true })
+}
+
+// Same-day slots for overlap/8h validation, excluding the entry being edited.
+export async function fetchDaySlots(date: string, excludeId?: string) {
+  const userId = await getAuthenticatedUserId()
+  let query = supabase
+    .from('timesheets')
+    .select('id, start_time, end_time')
+    .eq('user_id', userId)
+    .gte('date_memo', date)
+    .lte('date_memo', date)
+  if (excludeId) query = query.neq('id', excludeId)
+  return query.order('start_time', { ascending: true })
 }
 
 // from/to are 'YYYY-MM-DD', both inclusive. Returns every archived row in range (no pagination).

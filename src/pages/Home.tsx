@@ -246,7 +246,8 @@ export function Home() {
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-bold">Timesheets</h1>
         <button
-          class="btn btn-primary btn-circle text-xl"
+          class="btn btn-primary btn-circle text-xl tooltip tooltip-left"
+          data-tip="New entry"
           onClick={() => setModalOpen(true)}
         >
           +
@@ -272,9 +273,11 @@ export function Home() {
             Mark done
           </button>
           {isTauri && (
-            <button class="btn btn-secondary btn-sm" onClick={handleSendToAppsmith}>
-              Send to Msync
-            </button>
+            <div class="aura aura-glow">
+              <button class="btn btn-secondary btn-sm" onClick={handleSendToAppsmith}>
+                Send to Msync
+              </button>
+            </div>
           )}
           <button class="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())}>
             Clear

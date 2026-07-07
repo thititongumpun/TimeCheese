@@ -169,11 +169,11 @@ export function Archived() {
       <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
         <h1 class="text-2xl font-bold">Archived</h1>
         <div class="flex flex-wrap items-end gap-2">
-          <label class="form-control">
-            <span class="label-text text-xs">Start month</span>
+          <label class="fieldset">
+            <span class="label text-xs">Start month</span>
             <input
               type="month"
-              class="input input-bordered input-sm"
+              class="input input-sm"
               value={startMonth}
               max={endMonth}
               onInput={(e) => {
@@ -183,11 +183,11 @@ export function Archived() {
               }}
             />
           </label>
-          <label class="form-control">
-            <span class="label-text text-xs">End month</span>
+          <label class="fieldset">
+            <span class="label text-xs">End month</span>
             <input
               type="month"
-              class="input input-bordered input-sm"
+              class="input input-sm"
               value={endMonth}
               min={startMonth}
               onInput={(e) => {
@@ -205,7 +205,7 @@ export function Archived() {
       <form onSubmit={handleSearch} class="mb-4 flex flex-wrap items-center gap-2">
         <input
           type="search"
-          class="input input-bordered input-sm flex-1 min-w-48"
+          class="input input-sm flex-1 min-w-48"
           placeholder="Semantic search archived entries…"
           value={query}
           onInput={(e) => setQuery((e.target as HTMLInputElement).value)}

@@ -43,7 +43,7 @@ export function Notes() {
 
       <form onSubmit={add} class="mb-6 flex gap-2">
         <textarea
-          class="textarea textarea-bordered flex-1"
+          class="textarea flex-1"
           rows={2}
           placeholder="Write a note…"
           value={text}

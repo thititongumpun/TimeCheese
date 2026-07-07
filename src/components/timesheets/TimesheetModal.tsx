@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
-import { createTimesheet, updateTimesheet, searchArchived, type ArchivedMatch } from '../../services/timesheets'
+import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, type ArchivedMatch } from '../../services/timesheets'
+import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
 import type { TimesheetWithProject, Project, TimesheetInput } from '../../types'
 
 interface Props {
@@ -16,6 +17,8 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
   const [dateMemo, setDateMemo] = useState(
     timesheet ? timesheet.date_memo.slice(0, 10) : new Date().toISOString().slice(0, 10)
   )
+  const [startTime, setStartTime] = useState(timesheet?.start_time?.slice(0, 5) ?? DAY_START)
+  const [endTime, setEndTime] = useState(timesheet?.end_time?.slice(0, 5) ?? DAY_END)
   const [description, setDescription] = useState(timesheet?.description ?? '')
   const [projectId, setProjectId] = useState(timesheet?.project_id ?? '')
   // Free-text mirror of the project picker so the native datalist can search by typing.
@@ -60,13 +63,27 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
     }
     setLoading(true)
     setError(null)
-    const payload: TimesheetInput = {
-      date_memo: dateMemo,
-      description: trimmedDescription,
-      project_id: projectId || null,
-      is_complete: isComplete,
-    }
     try {
+      // No-overlap + 8h/day check against the other entries on this date.
+      const { data: dayRows, error: dayError } = await fetchDaySlots(dateMemo, timesheet?.id)
+      if (dayError) {
+        setError(dayError.message)
+        return
+      }
+      const others = (dayRows ?? []).filter((r): r is typeof r & Slot => !!r.start_time && !!r.end_time)
+      const timeError = validateTimeslot(startTime, endTime, others)
+      if (timeError) {
+        setError(timeError)
+        return
+      }
+      const payload: TimesheetInput = {
+        date_memo: dateMemo,
+        description: trimmedDescription,
+        project_id: projectId || null,
+        is_complete: isComplete,
+        start_time: startTime,
+        end_time: endTime,
+      }
       const { error } = timesheet
         ? await updateTimesheet(timesheet.id, payload)
         : await createTimesheet(payload)
@@ -91,26 +108,50 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               <span>{error}</span>
             </div>
           )}
-          <div class="form-control mb-3">
-            <label class="label" for="date_memo">
-              <span class="label-text">Date</span>
-            </label>
+          <div class="fieldset mb-3">
+            <label class="label" for="date_memo">Date</label>
             <input
               id="date_memo"
               type="date"
-              class="input input-bordered"
+              class="input w-full"
               value={dateMemo}
               onInput={(e) => setDateMemo(e.currentTarget.value)}
               required
             />
           </div>
-          <div class="form-control mb-3">
-            <label class="label" for="description">
-              <span class="label-text">Description</span>
-            </label>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="fieldset">
+              <label class="label" for="start_time">Start</label>
+              <input
+                id="start_time"
+                type="time"
+                class="input w-full"
+                min={DAY_START}
+                max={DAY_END}
+                value={startTime}
+                onInput={(e) => setStartTime(e.currentTarget.value)}
+                required
+              />
+            </div>
+            <div class="fieldset">
+              <label class="label" for="end_time">End</label>
+              <input
+                id="end_time"
+                type="time"
+                class="input w-full"
+                min={DAY_START}
+                max={DAY_END}
+                value={endTime}
+                onInput={(e) => setEndTime(e.currentTarget.value)}
+                required
+              />
+            </div>
+          </div>
+          <div class="fieldset mb-3">
+            <label class="label" for="description">Description</label>
             <textarea
               id="description"
-              class="textarea textarea-bordered"
+              class="textarea w-full"
               value={description}
               onInput={(e) => setDescription(e.currentTarget.value)}
               rows={3}
@@ -136,13 +177,11 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               </ul>
             )}
           </div>
-          <div class="form-control mb-3">
-            <label class="label" for="project_id">
-              <span class="label-text">Project</span>
-            </label>
+          <div class="fieldset mb-3">
+            <label class="label" for="project_id">Project</label>
             <input
               id="project_id"
-              class="input input-bordered"
+              class="input w-full"
               list="project-options"
               placeholder="Search a project…"
               value={projectQuery}
@@ -161,9 +200,9 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               ))}
             </datalist>
           </div>
-          <div class="form-control mb-4">
-            <label class="label cursor-pointer">
-              <span class="label-text">Complete</span>
+          <div class="fieldset mb-4">
+            <label class="label cursor-pointer justify-between w-full">
+              <span>Complete</span>
               <input
                 type="checkbox"
                 class="checkbox"
@@ -173,12 +212,10 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
             </label>
           </div>
           {timesheet?.ai_summary && (
-            <div class="form-control mb-4">
-              <label class="label">
-                <span class="label-text">AI Summary</span>
-              </label>
+            <div class="fieldset mb-4">
+              <label class="label">AI Summary</label>
               <textarea
-                class="textarea textarea-bordered text-base-content/60"
+                class="textarea w-full text-base-content/60"
                 value={timesheet.ai_summary}
                 rows={2}
                 disabled

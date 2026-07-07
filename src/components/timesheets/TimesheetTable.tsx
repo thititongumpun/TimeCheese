@@ -73,6 +73,11 @@ export function TimesheetTable({
                 </td>
                 <td class="whitespace-nowrap">
                   {new Date(t.date_memo).toLocaleDateString()}
+                  {t.start_time && t.end_time && (
+                    <div class="text-xs text-base-content/60">
+                      {t.start_time.slice(0, 5)}–{t.end_time.slice(0, 5)}
+                    </div>
+                  )}
                 </td>
                 <td class="max-w-xs">
                   <ExpandableText text={t.description} clampClass="line-clamp-2" />

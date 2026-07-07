@@ -43,35 +43,31 @@ export function ProjectModal({ project, onClose }: Props) {
               <span>{error}</span>
             </div>
           )}
-          <div class="form-control mb-3">
-            <label class="label" for="project_no">
-              <span class="label-text">Project No.</span>
-            </label>
+          <div class="fieldset mb-3">
+            <label class="label" for="project_no">Project No.</label>
             <input
               id="project_no"
               type="text"
-              class="input input-bordered"
+              class="input w-full"
               value={projectNo}
               onInput={(e) => setProjectNo(e.currentTarget.value)}
               required
             />
           </div>
-          <div class="form-control mb-3">
-            <label class="label" for="project_name">
-              <span class="label-text">Project Name</span>
-            </label>
+          <div class="fieldset mb-3">
+            <label class="label" for="project_name">Project Name</label>
             <input
               id="project_name"
               type="text"
-              class="input input-bordered"
+              class="input w-full"
               value={projectName}
               onInput={(e) => setProjectName(e.currentTarget.value)}
               required
             />
           </div>
-          <div class="form-control mb-4">
-            <label class="label cursor-pointer">
-              <span class="label-text">Active</span>
+          <div class="fieldset mb-4">
+            <label class="label cursor-pointer justify-between w-full">
+              <span>Active</span>
               <input
                 type="checkbox"
                 class="toggle toggle-primary"

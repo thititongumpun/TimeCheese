@@ -46,14 +46,24 @@ export function Holiday() {
       <div ref={ref} />
 
       {holidays.length > 0 && (
-        <ul class="menu bg-base-200 rounded-box mt-4 w-full max-w-md">
-          {holidays.map((h) => (
-            <li key={h.date} class="flex-row justify-between px-2 py-1">
-              <span class="font-mono text-sm opacity-70">{h.date}</span>
-              <span>{h.name}</span>
-            </li>
-          ))}
-        </ul>
+        <div class="overflow-x-auto mt-4">
+          <table class="table table-zebra">
+            <thead>
+              <tr>
+                <th class="w-40">Date</th>
+                <th>Holiday</th>
+              </tr>
+            </thead>
+            <tbody>
+              {holidays.map((h) => (
+                <tr key={h.date}>
+                  <td class="font-mono text-sm opacity-70 whitespace-nowrap">{h.date}</td>
+                  <td>{h.name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

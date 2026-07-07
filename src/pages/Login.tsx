@@ -75,27 +75,23 @@ export function Login() {
 
           {mode === 'signin' && (
             <form onSubmit={handleSignIn}>
-              <div class="form-control mb-4">
-                <label class="label" for="email">
-                  <span class="label-text">Email</span>
-                </label>
+              <div class="fieldset mb-4">
+                <label class="label" for="email">Email</label>
                 <input
                   id="email"
                   type="email"
-                  class="input input-bordered"
+                  class="input w-full"
                   value={email}
                   onInput={(e) => setEmail(e.currentTarget.value)}
                   required
                 />
               </div>
-              <div class="form-control mb-6">
-                <label class="label" for="password">
-                  <span class="label-text">Password</span>
-                </label>
+              <div class="fieldset mb-6">
+                <label class="label" for="password">Password</label>
                 <input
                   id="password"
                   type="password"
-                  class="input input-bordered"
+                  class="input w-full"
                   value={password}
                   onInput={(e) => setPassword(e.currentTarget.value)}
                   required
@@ -117,14 +113,12 @@ export function Login() {
 
           {mode === 'setup' && (
             <form onSubmit={codeSent ? handleSetPassword : handleSendCode}>
-              <div class="form-control mb-4">
-                <label class="label" for="setup-email">
-                  <span class="label-text">Email</span>
-                </label>
+              <div class="fieldset mb-4">
+                <label class="label" for="setup-email">Email</label>
                 <input
                   id="setup-email"
                   type="email"
-                  class="input input-bordered"
+                  class="input w-full"
                   value={email}
                   onInput={(e) => setEmail(e.currentTarget.value)}
                   disabled={codeSent}
@@ -134,29 +128,25 @@ export function Login() {
 
               {codeSent && (
                 <>
-                  <div class="form-control mb-4">
-                    <label class="label" for="code">
-                      <span class="label-text">6-digit code</span>
-                    </label>
+                  <div class="fieldset mb-4">
+                    <label class="label" for="code">6-digit code</label>
                     <input
                       id="code"
                       type="text"
                       inputMode="numeric"
                       autocomplete="one-time-code"
-                      class="input input-bordered tracking-widest"
+                      class="input w-full tracking-widest"
                       value={code}
                       onInput={(e) => setCode(e.currentTarget.value)}
                       required
                     />
                   </div>
-                  <div class="form-control mb-6">
-                    <label class="label" for="new-password">
-                      <span class="label-text">New password</span>
-                    </label>
+                  <div class="fieldset mb-6">
+                    <label class="label" for="new-password">New password</label>
                     <input
                       id="new-password"
                       type="password"
-                      class="input input-bordered"
+                      class="input w-full"
                       value={password}
                       onInput={(e) => setPassword(e.currentTarget.value)}
                       minLength={6}

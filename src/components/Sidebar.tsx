@@ -270,16 +270,16 @@ export function Sidebar() {
 
             <div class="divider" />
 
-            <div class="form-control">
+            <div class="fieldset">
               <label class="label" for="avatar-url">
-                <span class="label-text font-medium">Avatar URL</span>
+                <span class="label font-medium">Avatar URL</span>
               </label>
               <div class="flex gap-2">
                 <input
                   id="avatar-url"
                   type="url"
                   placeholder="https://…"
-                  class="input input-bordered input-sm flex-1"
+                  class="input input-sm flex-1"
                   value={avatarInput}
                   onInput={(e) => setAvatarInput(e.currentTarget.value)}
                 />
@@ -293,16 +293,16 @@ export function Sidebar() {
 
             <div class="divider" />
 
-            <div class="form-control">
+            <div class="fieldset">
               <label class="label" for="new-password">
-                <span class="label-text font-medium">Change password</span>
+                <span class="label font-medium">Change password</span>
               </label>
               <input
                 id="current-password"
                 type="password"
                 autocomplete="current-password"
                 placeholder="Current password"
-                class="input input-bordered input-sm mb-2"
+                class="input input-sm w-full mb-2"
                 value={currentPassword}
                 onInput={(e) => setCurrentPassword(e.currentTarget.value)}
               />
@@ -312,7 +312,7 @@ export function Sidebar() {
                   type="password"
                   autocomplete="new-password"
                   placeholder="New password"
-                  class="input input-bordered input-sm flex-1"
+                  class="input input-sm flex-1"
                   value={newPassword}
                   onInput={(e) => setNewPassword(e.currentTarget.value)}
                 />

@@ -3,6 +3,12 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.1.0] - 2026-07-07
+
+- New: **working hours on timesheets** — entries have start/end times (defaults 09:00–18:00). Validated on save: times must stay within 09:00–18:00, entries on the same day cannot overlap, and a day is capped at 8 worked hours (12:00–13:00 lunch excluded). The table shows the time range under the date and orders same-day entries by start time. Requires the `supabase/migrations/20260707_timeslot_columns.sql` migration.
+- Upgraded to **DaisyUI 5.6 + Tailwind CSS 4** (from DaisyUI 4 / Tailwind 3). Tailwind now runs via the `@tailwindcss/vite` plugin; `tailwind.config.cjs`/`postcss.config.cjs` are gone and theming lives in `src/index.css`. Forms migrated to the v5 classes.
+- UI: "Send to Msync" button gets DaisyUI 5.6's aura glow; "+" new-entry button gets a tooltip; the holiday list is now a full-width table under the calendar.
+
 ## [4.0.0] - 2026-07-07
 
 - New: **Send to Msync** — select timesheet rows on Home and auto-fill them into the Msync (Appsmith) timesheet app. Opens Msync in a desktop webview with an injected filler: per entry it searches the project by code, sets the date, picks the task (prefers names containing "IMP"), fills the memo, and clicks Create. Hours stay at the form's 09:00–18:00 defaults.

@@ -49,7 +49,7 @@ The Rust layer (`src-tauri/`) is window-hosting only. All business logic lives i
 
 **Query builder pattern:** In `timesheets.ts`, all filter methods (`.gte`, `.lte`, `.eq`) are applied before `.order()`. The `.order()` call must be last — it is the terminal method that returns a `Promise`.
 
-**CSS:** DaisyUI v4 + Tailwind CSS v3. Config files use `.cjs` extension (`tailwind.config.cjs`, `postcss.config.cjs`) because the project has `"type": "module"`. DaisyUI v4 does not support the `btn loading` modifier class — use `<span class="loading loading-spinner loading-xs" />` inside a button instead.
+**CSS:** DaisyUI v5 + Tailwind CSS v4. No `tailwind.config` / `postcss.config` — Tailwind runs via the `@tailwindcss/vite` plugin and everything is configured in `src/index.css` (`@import "tailwindcss"` + `@plugin "daisyui" { themes: light --default, dark --prefersdark; }`). v5 gotchas: inputs/selects/textareas are bordered by default (no `*-bordered` classes); `form-control`/`label-text` are gone (use `fieldset`/`label`); use `<span class="loading loading-spinner loading-xs" />` inside buttons for spinners.
 
 **Preact JSX gotchas:** Use `class=` (not `className=`), `for=` on labels (not `htmlFor=`), and `onInput` for input handlers.
 

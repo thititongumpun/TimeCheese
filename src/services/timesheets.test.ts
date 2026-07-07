@@ -37,10 +37,13 @@ function makeChain(result: any) {
     eq: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue(result),
+    order: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue(result),
     maybeSingle: vi.fn().mockResolvedValue(result),
     upsert: vi.fn().mockResolvedValue(result),
+    // order() now chains (date_memo then start_time), so awaiting the chain
+    // itself resolves the query result, like the real builder.
+    then: (resolve: (v: any) => any) => Promise.resolve(result).then(resolve),
   }
   return chain
 }
@@ -138,6 +141,8 @@ describe('timesheets service', () => {
       description: 'Did stuff',
       project_id: null,
       is_complete: false,
+      start_time: null,
+      end_time: null,
     }
     await createTimesheet(input)
 
@@ -160,6 +165,8 @@ describe('timesheets service', () => {
       description: 'Did stuff',
       project_id: null,
       is_complete: false,
+      start_time: null,
+      end_time: null,
     })).rejects.toThrow('Cloudflare AI request failed.')
 
     expect(chain.insert).not.toHaveBeenCalled()
@@ -177,6 +184,8 @@ describe('timesheets service', () => {
       description: 'Did stuff',
       project_id: null,
       is_complete: false,
+      start_time: null,
+      end_time: null,
     })).rejects.toThrow('You must be signed in to save data.')
 
     expect(mockSummarizeDescription).not.toHaveBeenCalled()

@@ -20,6 +20,8 @@ export interface Timesheet {
   inserted_at: string
   is_complete: boolean
   ai_summary: string | null
+  start_time: string | null // "HH:MM:SS"
+  end_time: string | null
 }
 
 export interface TimesheetWithProject extends Timesheet {
@@ -44,4 +46,6 @@ export type TimesheetInput = {
   description: string
   project_id: string | null
   is_complete: boolean
+  start_time: string | null
+  end_time: string | null
 }
