@@ -109,8 +109,29 @@ check (matches project convention: no Rust tests exist today).
 - Need the real **Appsmith app URL** to drop into `APPSMITH_URL`.
 
 ## Out of scope / deferred
-- Per-row variable hours (fixed 09:00–18:00 as requested).
-- Storing hours in the TimeSh1t schema.
+- ~~Per-row variable hours (fixed 09:00–18:00 as requested).~~ → planned, see next phase below.
+- ~~Storing hours in the TimeSh1t schema.~~ → done in v4.1.0 (`start_time`/`end_time`).
 - Web (non-Tauri) support — button hidden outside the desktop app.
 - Release ritual (version bump + CHANGELOG) — do after the feature works, per the existing
   v3.x release pattern, if the user wants to ship it.
+
+## Next phase: send actual per-row times (user-confirmed 2026-07-07, not yet started)
+
+Since v4.1.0, timesheets carry validated `start_time`/`end_time` (time columns; app-enforced:
+09:00–18:00 window, no same-day overlap, ≤8 worked hours/day with 12:00–13:00 lunch excluded —
+`src/lib/timeslot.ts` + `supabase/migrations/20260707_timeslot_columns.sql`). The filler should
+send those instead of the fixed 09:00/18:00 defaults.
+
+Validation guarantees every stored slot already fits Msync's rules, so the filler needs no
+extra checking — just plumbing:
+
+1. **`src/pages/Home.tsx` — `handleSendToAppsmith()`**: add `startTime: t.start_time` and
+   `endTime: t.end_time` to the `rows` objects (null for pre-v4.1.0 rows — filler falls back
+   to defaults).
+2. **`src-tauri/src/lib.rs` — fill script in `open_appsmith_filler`**: replace the fixed
+   `START`/`END` constants with per-row values (`row.startTime ?? '09:00'`,
+   `row.endTime ?? '18:00'`) and drive Msync's hour/minute pickers from them in `fillOne`.
+   Selector work for the time pickers is the only live-tuning expected — same devtools
+   iteration loop as §Verification.
+
+Everything else (window plumbing, project matching, completion signal, fill log) is untouched.
