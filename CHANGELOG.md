@@ -3,6 +3,10 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.2.1] - 2026-07-08
+
+- Msync's Memo field now gets the **AI summary** of the entry (falls back to the raw description when no summary exists yet). The fill log records whichever text was pasted.
+
 ## [4.2.0] - 2026-07-08
 
 - Send to Msync now fills each entry's **actual start/end times** into the hour/minute pickers (the v4.1.0 columns). Entries without stored times keep the form's 09:00–18:00 defaults. The dropdowns are virtualized, so values are picked via the popover's filter box.
