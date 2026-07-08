@@ -196,7 +196,8 @@ export function Home() {
     const rows = sent.map((t) => ({
       date: t.date_memo, // raw ISO — the fill script formats it for the date picker
       projectNo: t.projects?.project_no ?? '',
-      description: t.description,
+      // Msync's Memo gets the AI summary; fall back to the raw description when absent.
+      description: t.ai_summary || t.description,
       // "HH:MM:SS" or null (pre-v4.1.0 rows) — null leaves Msync's 09:00/18:00 defaults.
       startTime: t.start_time,
       endTime: t.end_time,
@@ -216,7 +217,7 @@ export function Home() {
           entries: done.map((t) => ({
             date: t.date_memo.slice(0, 10),
             projectNo: t.projects?.project_no ?? '',
-            description: t.description,
+            description: t.ai_summary || t.description, // what was actually pasted into Memo
           })),
         }
         const log = [run, ...fillLog].slice(0, 50)
