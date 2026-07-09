@@ -119,6 +119,8 @@ export function Archived() {
     setError(null)
     const sheet = XLSX.utils.json_to_sheet(rows.map((t) => ({
       Date: new Date(t.date_memo).toLocaleDateString(),
+      Start: t.start_time?.slice(0, 5) ?? '', // "09:00:00" -> "09:00"; null on pre-v4.1.0 rows
+      End: t.end_time?.slice(0, 5) ?? '',
       Description: t.description,
       Project: t.projects?.project_name ?? '',
       Complete: t.is_complete ? 'Yes' : 'No',

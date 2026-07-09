@@ -3,6 +3,11 @@
 All notable changes to TimeSh1t are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.3.2] - 2026-07-09
+
+- Redesigned sidebar: live clock, icon navigation with an active-route accent, and a one-click light/dark toggle in the footer.
+- Archived Excel export now includes **Start** and **End** time columns.
+
 ## [4.3.1] - 2026-07-09
 
 - Jira setup now uses Atlassian's streamable-HTTP MCP endpoint (`/v1/mcp/authv2`); the SSE endpoint is deprecated (EOL 30 Jun 2026).

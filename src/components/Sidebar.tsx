@@ -9,6 +9,41 @@ import { currentUser } from '../store/auth'
 import { onlineUsers, updatePresence } from '../store/presence'
 import { applyTheme, getStoredTheme, type ThemeMode } from '../lib/theme'
 
+// Lucide-style stroke icons, drawn with currentColor so they inherit the link's theme color.
+const ICONS: Record<string, string[]> = {
+  clock: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18', 'M12 7.5V12l3 2'],
+  sun: ['M12 4V2M12 22v-2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M18 6l1.5-1.5M4.5 19.5 6 18', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8'],
+  moon: ['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'],
+  home: ['M3 10.5 12 3l9 7.5', 'M5 9.5V20h14V9.5', 'M9.5 20v-5.5h5V20'],
+  projects: ['M3 8h18v11H3z', 'M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', 'M3 13h18'],
+  archived: ['M3 4h18v4H3z', 'M5 8v11h14V8', 'M9.5 12h5'],
+  holiday: ['M4 5h16v15H4z', 'M4 9h16', 'M8 3v4M16 3v4'],
+  notes: ['M6 3h8l4 4v14H6z', 'M14 3v4h4', 'M9 12h6M9 16h4'],
+  ask: ['M4 5h16v11H9l-4 4V5z', 'M12 8.5a1.6 1.6 0 0 1 1.6 1.6c0 1.2-1.6 1.2-1.6 2.4', 'M12 14.5h.01'],
+  jira: ['M12 2 20 12l-8 10L4 12z', 'M12 8l4 4-4 4-4-4z'],
+  timeline: ['M3 12h4l2.5-7 4 14 2.5-7H21'],
+}
+
+function Icon({ paths, class: cls = 'h-[18px] w-[18px]' }: { paths: string[]; class?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+      stroke-linecap="round" stroke-linejoin="round" class={`${cls} shrink-0`}>
+      {paths.map((d) => <path key={d} d={d} />)}
+    </svg>
+  )
+}
+
+const NAV = [
+  { href: '/', label: 'Home', icon: 'home', exact: true },
+  { href: '/projects', label: 'Projects', icon: 'projects' },
+  { href: '/archived', label: 'Archived', icon: 'archived' },
+  { href: '/holiday', label: 'Holiday', icon: 'holiday' },
+  { href: '/notes', label: 'Notes', icon: 'notes' },
+  { href: '/ask', label: 'Ask', icon: 'ask' },
+  { href: '/jira', label: 'Jira', icon: 'jira' },
+  { href: '/timeline', label: 'Timeline', icon: 'timeline' },
+]
+
 export function Sidebar() {
   const { url } = useLocation()
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -52,6 +87,15 @@ export function Sidebar() {
   useEffect(() => {
     check().then(setUpdate).catch(() => {})
   }, [])
+
+  // Signature: a live clock — this is a timesheet app, so the current time is the identity.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const clock = now.toLocaleTimeString([], { hour12: false })
+  const today = now.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
 
   async function saveAvatar() {
     setSavingAvatar(true)
@@ -136,51 +180,41 @@ export function Sidebar() {
   }
 
   return (
-    <aside class="w-48 h-screen bg-base-200 flex flex-col">
-      <div class="p-4 font-bold text-xl text-primary">T1meSh1t</div>
-      <nav class="flex-1 px-2">
-        <ul class="menu menu-sm">
-          <li>
-            <a href="/" class={url === '/' ? 'active' : ''}>
-              Home
+    <aside class="flex h-screen w-52 flex-col border-r border-base-300 bg-base-200">
+      {/* Brand + live clock (signature) */}
+      <div class="px-4 pt-4 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="grid h-8 w-8 place-items-center rounded-lg bg-primary/15 text-primary">
+            <Icon paths={ICONS.clock} />
+          </span>
+          <span class="text-lg font-bold tracking-tight">T1meSh1t</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2 font-mono tabular-nums">
+          <span class="text-2xl font-semibold leading-none">{clock}</span>
+          <span class="text-[0.65rem] uppercase tracking-widest opacity-50">{today}</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
+        {NAV.map((item) => {
+          const active = item.exact ? url === item.href : url.startsWith(item.href)
+          return (
+            <a
+              key={item.href}
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              class={`flex items-center gap-3 rounded-lg py-2 pr-3 text-sm transition-colors ${
+                active
+                  ? 'bg-primary/10 font-medium text-primary'
+                  : 'text-base-content/70 hover:bg-base-300/60 hover:text-base-content'
+              }`}
+            >
+              <span class={`h-5 w-0.5 rounded-full ${active ? 'bg-primary' : 'bg-transparent'}`} />
+              <Icon paths={ICONS[item.icon]} />
+              <span>{item.label}</span>
             </a>
-          </li>
-          <li>
-            <a href="/projects" class={url.startsWith('/projects') ? 'active' : ''}>
-              Projects
-            </a>
-          </li>
-          <li>
-            <a href="/archived" class={url.startsWith('/archived') ? 'active' : ''}>
-              Archived
-            </a>
-          </li>
-          <li>
-            <a href="/holiday" class={url.startsWith('/holiday') ? 'active' : ''}>
-              Holiday
-            </a>
-          </li>
-          <li>
-            <a href="/notes" class={url.startsWith('/notes') ? 'active' : ''}>
-              Notes
-            </a>
-          </li>
-          <li>
-            <a href="/ask" class={url.startsWith('/ask') ? 'active' : ''}>
-              Ask
-            </a>
-          </li>
-          <li>
-            <a href="/jira" class={url.startsWith('/jira') ? 'active' : ''}>
-              Jira
-            </a>
-          </li>
-          <li>
-            <a href="/timeline" class={url.startsWith('/timeline') ? 'active' : ''}>
-              Timeline
-            </a>
-          </li>
-        </ul>
+          )
+        })}
       </nav>
       {new Date().getDate() === 25 && (
         <div class="px-3 pb-2">
@@ -206,6 +240,26 @@ export function Sidebar() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Quick light/dark switch — the full theme row still lives in Settings */}
+      <div class="px-3 pb-2">
+        <div class="join w-full">
+          <button
+            class={`btn join-item btn-xs flex-1 gap-1 ${theme === 'light' ? 'btn-primary' : 'btn-ghost'}`}
+            aria-pressed={theme === 'light'}
+            onClick={() => changeTheme('light')}
+          >
+            <Icon paths={ICONS.sun} class="h-3.5 w-3.5" /> Light
+          </button>
+          <button
+            class={`btn join-item btn-xs flex-1 gap-1 ${theme === 'dark' ? 'btn-primary' : 'btn-ghost'}`}
+            aria-pressed={theme === 'dark'}
+            onClick={() => changeTheme('dark')}
+          >
+            <Icon paths={ICONS.moon} class="h-3.5 w-3.5" /> Dark
+          </button>
         </div>
       </div>
 
