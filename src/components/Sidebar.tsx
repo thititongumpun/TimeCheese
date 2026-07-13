@@ -22,6 +22,7 @@ const ICONS: Record<string, string[]> = {
   ask: ['M4 5h16v11H9l-4 4V5z', 'M12 8.5a1.6 1.6 0 0 1 1.6 1.6c0 1.2-1.6 1.2-1.6 2.4', 'M12 14.5h.01'],
   jira: ['M12 2 20 12l-8 10L4 12z', 'M12 8l4 4-4 4-4-4z'],
   timeline: ['M3 12h4l2.5-7 4 14 2.5-7H21'],
+  park: ['M5 11 6.5 6.5h11L19 11', 'M3 11h18v6h-2M3 17h2m14 0H7', 'M6.5 14h.01M17.5 14h.01'],
   sidebar: ['M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z', 'M9 4v16', 'M14 10l2 2l-2 2'],
 }
 
@@ -43,6 +44,7 @@ const NAV = [
   { href: '/ask', label: 'Ask', icon: 'ask' },
   { href: '/jira', label: 'Jira', icon: 'jira' },
   { href: '/timeline', label: 'Timeline', icon: 'timeline' },
+  { href: '/park', label: 'Park', icon: 'park' },
 ]
 
 export function Sidebar() {

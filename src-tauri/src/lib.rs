@@ -474,6 +474,25 @@ async fn open_appsmith_filler(app: tauri::AppHandle, url: String, rows_json: Str
     Ok(())
 }
 
+// Open-or-focus the Msync park window. Reuse keeps the SSO session alive.
+#[tauri::command]
+async fn open_park_window(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("park") {
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        "park",
+        tauri::WebviewUrl::External(url.parse().map_err(|e| format!("bad Msync URL: {e}"))?),
+    )
+    .title("Msync Park")
+    .inner_size(1200.0, 850.0)
+    .build()
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -488,7 +507,7 @@ pub fn run() {
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, ask_claude, claude_status, open_appsmith_filler])
+        .invoke_handler(tauri::generate_handler![greet, ask_claude, claude_status, open_appsmith_filler, open_park_window])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

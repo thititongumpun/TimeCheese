@@ -14,6 +14,7 @@ import { Notes } from './pages/Notes'
 import { Ask } from './pages/Ask'
 import { JiraAssistant } from './pages/JiraAssistant'
 import { Timeline } from './pages/Timeline'
+import { Park } from './pages/Park'
 import { Layout } from './components/Layout'
 
 function toOnlineUser(user: User): OnlineUser {
@@ -66,6 +67,7 @@ export function App() {
           <Route path="/ask" component={Ask} />
           <Route path="/jira" component={JiraAssistant} />
           <Route path="/timeline" component={Timeline} />
+          <Route path="/park" component={Park} />
         </Router>
       </Layout>
     </LocationProvider>
