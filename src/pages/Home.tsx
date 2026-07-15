@@ -4,8 +4,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { fetchTimesheets, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
+import { fetchHolidays } from '../services/holidays'
 import { confirmDialog } from '../lib/confirm'
 import { APPSMITH_URL } from '../lib/appsmith'
+import { ymd, periodStart, missingWorkdays } from '../lib/missing-days'
 import { TimesheetTable } from '../components/timesheets/TimesheetTable'
 import { TimesheetFilters } from '../components/timesheets/TimesheetFilters'
 import { TimesheetModal } from '../components/timesheets/TimesheetModal'
@@ -23,11 +25,6 @@ type FillRun = {
 
 function readFillLog(): FillRun[] {
   try { return JSON.parse(localStorage.getItem('appsmith_fill_log') ?? '[]') } catch { return [] }
-}
-
-// Local YYYY-MM-DD — toISOString() would shift to UTC and roll the date back a day in +07.
-function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 // Next occurrence of the 26th at 00:00 local time (this month, or next if already past).
@@ -72,6 +69,27 @@ function CutoffCountdown() {
   )
 }
 
+// Holidays don't change mid-session; cache the fetch (cleared on error so a flaky feed can retry).
+let holidaysCache: ReturnType<typeof fetchHolidays> | null = null
+
+// "Mon 7 Jul" from a YYYY-MM-DD key, parsed in local time (no UTC shift).
+function formatMissingDate(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+function MissingDaysBanner({ days, onDismiss }: { days: string[]; onDismiss: () => void }) {
+  if (days.length === 0) return null
+  const shown = days.slice(0, 6).map(formatMissingDate).join(', ')
+  const extra = days.length > 6 ? ` and ${days.length - 6} more` : ''
+  return (
+    <div class="alert alert-warning mb-4">
+      <span>⚠ No entries on {days.length} working day{days.length === 1 ? '' : 's'}: {shown}{extra}</span>
+      <button class="btn btn-ghost btn-xs" onClick={onDismiss} aria-label="Dismiss">✕</button>
+    </div>
+  )
+}
+
 function defaultFilters(): Filters {
   const now = new Date()
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -96,6 +114,8 @@ export function Home() {
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [fillLog, setFillLog] = useState<FillRun[]>(readFillLog)
+  const [missingDays, setMissingDays] = useState<string[]>([])
+  const [missingDismissed, setMissingDismissed] = useState(false)
 
   async function loadTimesheets() {
     setLoading(true)
@@ -105,6 +125,40 @@ export function Home() {
     else setTimesheets((data as TimesheetWithProject[]) ?? [])
     setSelectedIds(new Set())
     setLoading(false)
+    loadMissingDays()
+  }
+
+  // Past working days in the current cutoff period with zero entries. Skipped entirely
+  // (no false-positive banner) if the holiday feed is down.
+  async function loadMissingDays() {
+    const today = new Date()
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
+    const start = periodStart(today)
+
+    holidaysCache ??= fetchHolidays().then((res) => {
+      if (res.error) holidaysCache = null
+      return res
+    })
+    const { data: holidays, error: holidaysError } = await holidaysCache
+    if (holidaysError) {
+      setMissingDays([])
+      return
+    }
+
+    const { data, error } = await fetchTimesheets({
+      date_from: ymd(start),
+      date_to: ymd(yesterday),
+      project_id: null,
+      status: 'all',
+    })
+    if (error) {
+      setMissingDays([])
+      return
+    }
+
+    const recorded = new Set(((data as TimesheetWithProject[]) ?? []).map((t) => t.date_memo.slice(0, 10)))
+    const holidaySet = new Set((holidays ?? []).map((h) => h.date))
+    setMissingDays(missingWorkdays(start, yesterday, recorded, holidaySet))
   }
 
   async function loadProjects() {
@@ -290,6 +344,9 @@ export function Home() {
   return (
     <div>
       <CutoffCountdown />
+      {!missingDismissed && (
+        <MissingDaysBanner days={missingDays} onDismiss={() => setMissingDismissed(true)} />
+      )}
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-2xl font-bold">Timesheets</h1>
         <button
