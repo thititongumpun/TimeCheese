@@ -28,6 +28,11 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "targets": "all",
+    "windows": {
+      "wix": {
+        "upgradeCode": "6dfec5ec-4ea7-5387-8a3c-8c035e1a5369"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
