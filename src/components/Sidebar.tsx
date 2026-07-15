@@ -1,6 +1,7 @@
 import { useLocation } from 'preact-iso'
 import { useEffect, useState } from 'preact/hooks'
 import { getVersion } from '@tauri-apps/api/app'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import packageJson from '../../package.json'
@@ -12,6 +13,7 @@ import { applyTheme, getStoredTheme, THEMES, type ThemeMode } from '../lib/theme
 // Lucide-style stroke icons, drawn with currentColor so they inherit the link's theme color.
 const ICONS: Record<string, string[]> = {
   clock: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18', 'M12 7.5V12l3 2'],
+  globe: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18', 'M3 12h18', 'M12 3a13.5 13.5 0 0 1 0 18 13.5 13.5 0 0 1 0-18'],
   sun: ['M12 4V2M12 22v-2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M18 6l1.5-1.5M4.5 19.5 6 18', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8'],
   moon: ['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'],
   home: ['M3 10.5 12 3l9 7.5', 'M5 9.5V20h14V9.5', 'M9.5 20v-5.5h5V20'],
@@ -443,6 +445,24 @@ export function Sidebar() {
                 >
                   {checkingUpdate && <span class="loading loading-spinner loading-xs" />}
                   Check for updates
+                </button>
+              </div>
+              <div class="mt-2 flex gap-4 text-sm">
+                <button
+                  class="link link-hover flex items-center gap-1.5 opacity-70 hover:opacity-100"
+                  onClick={() => openUrl('https://github.com/thititongumpun/TimeCheese')}
+                >
+                  <svg viewBox="0 0 16 16" fill="currentColor" class="h-4 w-4 shrink-0" aria-hidden="true">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                  </svg>
+                  GitHub
+                </button>
+                <button
+                  class="link link-hover flex items-center gap-1.5 opacity-70 hover:opacity-100"
+                  onClick={() => openUrl('https://thititongumpun.github.io/TimeCheese/')}
+                >
+                  <Icon paths={ICONS.globe} class="h-4 w-4" />
+                  Website
                 </button>
               </div>
               {updateStatus && (
