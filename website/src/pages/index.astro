@@ -1,0 +1,304 @@
+---
+import Base from '../layouts/Base.astro';
+
+const RELEASES_URL = 'https://github.com/thititongumpun/TimeCheese/releases/latest';
+
+let version = 'latest';
+let msiUrl = RELEASES_URL;
+let exeUrl = RELEASES_URL;
+let dmgUrl = RELEASES_URL;
+
+try {
+  const res = await fetch('https://api.github.com/repos/thititongumpun/TimeCheese/releases/latest');
+  if (res.ok) {
+    const release = await res.json();
+    version = release.tag_name ?? version;
+    const assets: Array<{ name: string; browser_download_url: string }> = release.assets ?? [];
+    const msi = assets.find((a) => a.name.endsWith('.msi'));
+    const exe = assets.find((a) => a.name.endsWith('-setup.exe') || a.name.endsWith('.exe'));
+    const dmg = assets.find((a) => a.name.endsWith('.dmg'));
+    if (msi) msiUrl = msi.browser_download_url;
+    if (exe) exeUrl = exe.browser_download_url;
+    if (dmg) dmgUrl = dmg.browser_download_url;
+  }
+} catch {
+  // offline / rate-limited — fall back to the releases page for every link
+}
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const freeFeatures = [
+  {
+    glyph: '⏱️',
+    title: 'Timesheet tracking',
+    body: 'Log entries per project with start/end times, validated against the 09:00–18:00 working window, max 8 worked hours/day (lunch 12:00–13:00 excluded).',
+  },
+  {
+    glyph: '📁',
+    title: 'Projects',
+    body: 'Manage active projects and assign entries.',
+  },
+  {
+    glyph: '🗄️',
+    title: 'Archive & AI digests',
+    body: 'Browse archived entries with search; monthly AI summaries.',
+  },
+  {
+    glyph: '📅',
+    title: 'Holiday calendar',
+    body: 'Interactive company holiday calendar.',
+  },
+  {
+    glyph: '🔁',
+    title: 'Msync auto-fill',
+    body: 'Fills your timesheet rows into the company Msync/Appsmith site through an SSO-preserving window.',
+  },
+  {
+    glyph: '🚗',
+    title: 'Park auto-fill',
+    body: 'Carpark registration autofill with vehicle management.',
+  },
+  {
+    glyph: '⏳',
+    title: 'Cutoff countdown',
+    body: 'Always know how long until the monthly timesheet cutoff (26th).',
+  },
+  {
+    glyph: '⬆️',
+    title: 'Auto-update',
+    body: 'New versions install themselves.',
+  },
+];
+
+const proFeatures = [
+  {
+    glyph: '🎫',
+    title: 'Jira Assistant',
+    body: 'Transition Jira issues, "mark done + close Jira" straight from a timesheet row.',
+  },
+  {
+    glyph: '💬',
+    title: 'Ask Claude',
+    body: 'Free-form prompts to Claude from inside the app.',
+  },
+];
+
+const comparisonRows = [
+  ['Timesheet tracking', true, true],
+  ['Projects', true, true],
+  ['Archive & AI digests', true, true],
+  ['Holiday calendar', true, true],
+  ['Msync auto-fill', true, true],
+  ['Park auto-fill', true, true],
+  ['Cutoff countdown', true, true],
+  ['Auto-update', true, true],
+  ['Jira Assistant', false, true],
+  ['Ask Claude', false, true],
+] as const;
+---
+
+<Base title="TimeCheese — desktop timesheet tracker">
+  <!-- Hero -->
+  <section class="max-w-5xl mx-auto px-6 pt-20 pb-24 grid md:grid-cols-2 gap-12 items-center">
+    <div>
+      <h1 class="font-display text-5xl sm:text-6xl font-extrabold tracking-tight leading-[1.05]">
+        Time<span class="text-[var(--color-accent)]">Cheese</span>
+      </h1>
+      <p class="mt-5 text-lg text-[var(--color-muted)] max-w-md">
+        A desktop timesheet tracker. Log entries against projects, mark them complete, and never
+        miss the monthly cutoff.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-4">
+        <a
+          href={msiUrl}
+          class="inline-flex items-center justify-center rounded-md bg-[var(--color-accent)] px-5 py-3 text-sm font-semibold text-[var(--color-bg)] hover:bg-[var(--color-accent-deep)] transition-colors"
+        >
+          Download for Windows
+        </a>
+        <a
+          href={dmgUrl}
+          class="inline-flex items-center justify-center rounded-md border border-[var(--color-border)] px-5 py-3 text-sm font-semibold hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+        >
+          Download for macOS
+        </a>
+      </div>
+      <p class="mt-4 text-xs text-[var(--color-muted)]">
+        v{version} · Free for provisioned users · Auto-updates built in
+      </p>
+    </div>
+
+    <!-- Signature "day timeline" graphic -->
+    <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-xs font-mono text-[var(--color-muted)]">today's timeline</span>
+        <span class="inline-flex items-center rounded-full border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 px-2.5 py-1 text-xs font-mono text-[var(--color-accent)]">
+          7.5h / 8h
+        </span>
+      </div>
+      <div class="relative h-14 rounded-md bg-[var(--color-bg)] border border-[var(--color-border)] overflow-hidden flex">
+        <!-- 09:00-11:30 API review (2.5h of 9h = 27.8%) -->
+        <div class="timeline-block h-full bg-[var(--color-accent)]/80 flex items-center justify-center text-[10px] font-mono text-[var(--color-bg)]" style="width: 27.8%;">
+          API review
+        </div>
+        <!-- 11:30-12:00 gap -->
+        <div class="h-full" style="width: 5.6%;"></div>
+        <!-- 12:00-13:00 lunch, hatched -->
+        <div
+          class="h-full flex items-center justify-center text-[9px] font-mono text-[var(--color-muted)]"
+          style="width: 11.1%; background-image: repeating-linear-gradient(45deg, var(--color-border) 0, var(--color-border) 3px, transparent 3px, transparent 7px);"
+          title="lunch — never counted"
+        >
+          lunch
+        </div>
+        <!-- 13:00-18:00 MED-142 (5h of 9h = 55.5%) -->
+        <div class="timeline-block h-full bg-[var(--color-accent)]/80 flex items-center justify-center text-[10px] font-mono text-[var(--color-bg)]" style="width: 55.5%; animation-delay: 0.25s;">
+          MED-142
+        </div>
+      </div>
+      <div class="relative mt-2 h-4 text-[10px] font-mono text-[var(--color-muted)]">
+        <span class="absolute left-0">09:00</span>
+        <span class="absolute left-[33.3%] -translate-x-1/2">12:00</span>
+        <span class="absolute left-[44.4%]">13:00</span>
+        <span class="absolute right-0">18:00</span>
+      </div>
+      <p class="mt-4 text-xs text-[var(--color-muted)]">
+        12:00–13:00 lunch is hatched and dimmed — it's never counted toward the 8-hour cap.
+      </p>
+    </div>
+  </section>
+
+  <!-- Free features -->
+  <section class="border-t border-[var(--color-border)] py-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h2 class="font-display text-3xl font-bold tracking-tight">Everything in the box</h2>
+      <p class="mt-2 text-[var(--color-muted)]">All free, and works out of the box.</p>
+      <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {freeFeatures.map((f) => (
+          <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+            <span class="text-xl">{f.glyph}</span>
+            <h3 class="mt-3 font-semibold">{f.title}</h3>
+            <p class="mt-1.5 text-sm text-[var(--color-muted)]">{f.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Pro -->
+  <section class="border-t border-[var(--color-border)] py-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h2 class="font-display text-3xl font-bold tracking-tight">Pro, bring your own Claude</h2>
+      <p class="mt-2 text-[var(--color-muted)] max-w-2xl">
+        These features need a locally installed Claude Code CLI (your own subscription) plus the
+        Atlassian MCP server. This isn't a paid tier of TimeCheese — TimeCheese itself is free.
+      </p>
+      <div class="mt-10 grid sm:grid-cols-2 gap-4 max-w-2xl">
+        {proFeatures.map((f) => (
+          <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+            <span class="text-xl">{f.glyph}</span>
+            <h3 class="mt-3 font-semibold">{f.title}</h3>
+            <p class="mt-1.5 text-sm text-[var(--color-muted)]">{f.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison table -->
+  <section class="border-t border-[var(--color-border)] py-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h2 class="font-display text-3xl font-bold tracking-tight">Free vs Pro</h2>
+      <div class="mt-8 overflow-x-auto rounded-lg border border-[var(--color-border)]">
+        <table class="w-full text-sm min-w-[480px]">
+          <thead>
+            <tr class="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+              <th class="text-left px-4 py-3 font-semibold">Feature</th>
+              <th class="text-center px-4 py-3 font-semibold">Free</th>
+              <th class="text-center px-4 py-3 font-semibold">Pro (BYO Claude)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {comparisonRows.map(([label, free, pro]) => (
+              <tr class="border-b border-[var(--color-border)] last:border-b-0">
+                <td class="px-4 py-3 text-[var(--color-text)]">{label}</td>
+                <td class:list={['px-4 py-3 text-center', free ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]']}>{free ? '✓' : '—'}</td>
+                <td class:list={['px-4 py-3 text-center', pro ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]']}>{pro ? '✓' : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="px-4 py-3 text-xs text-[var(--color-muted)]">
+                Requires your own Claude Code subscription + Atlassian MCP server.
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section class="border-t border-[var(--color-border)] py-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h2 class="font-display text-3xl font-bold tracking-tight">Download</h2>
+      <div class="mt-8 grid sm:grid-cols-2 gap-6">
+        <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <h3 class="font-semibold">Windows</h3>
+          <p class="mt-1.5 text-sm text-[var(--color-muted)]">.msi installer or .exe setup.</p>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <a href={msiUrl} class="text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-deep)]">.msi ↓</a>
+            <a href={exeUrl} class="text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-deep)]">.exe ↓</a>
+          </div>
+        </div>
+        <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <h3 class="font-semibold">macOS</h3>
+          <p class="mt-1.5 text-sm text-[var(--color-muted)]">Universal .dmg — Apple Silicon + Intel.</p>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <a href={dmgUrl} class="text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-deep)]">.dmg ↓</a>
+          </div>
+        </div>
+      </div>
+      <p class="mt-6 text-sm">
+        <a href={RELEASES_URL} class="text-[var(--color-accent)] hover:text-[var(--color-accent-deep)] font-semibold">All versions →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- Quickstart teaser -->
+  <section class="border-t border-[var(--color-border)] py-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h2 class="font-display text-3xl font-bold tracking-tight">Quickstart</h2>
+      <ol class="mt-8 grid sm:grid-cols-3 gap-6">
+        <li class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <span class="text-xs font-mono text-[var(--color-accent)]">01</span>
+          <h3 class="mt-2 font-semibold">Install</h3>
+          <p class="mt-1.5 text-sm text-[var(--color-muted)]">Run the .msi on Windows or drag to Applications on macOS.</p>
+        </li>
+        <li class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <span class="text-xs font-mono text-[var(--color-accent)]">02</span>
+          <h3 class="mt-2 font-semibold">Sign in</h3>
+          <p class="mt-1.5 text-sm text-[var(--color-muted)]">Use the email + password your admin provisioned.</p>
+        </li>
+        <li class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <span class="text-xs font-mono text-[var(--color-accent)]">03</span>
+          <h3 class="mt-2 font-semibold">Log your first entry</h3>
+          <p class="mt-1.5 text-sm text-[var(--color-muted)]">Pick a project, date, and time — TimeCheese validates it for you.</p>
+        </li>
+      </ol>
+      <p class="mt-6 text-sm">
+        <a href={`${base}/docs/quickstart/`} class="text-[var(--color-accent)] hover:text-[var(--color-accent-deep)] font-semibold">Full quickstart guide →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- Getting access -->
+  <section class="border-t border-[var(--color-border)] py-16">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+        <p class="text-sm text-[var(--color-muted)]">No sign-up. Accounts are provisioned by your admin.</p>
+        <a href={`${base}/docs/getting-access/`} class="text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-deep)]">Getting access →</a>
+      </div>
+    </div>
+  </section>
+</Base>

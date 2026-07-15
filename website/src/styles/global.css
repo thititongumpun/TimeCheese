@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #14100b;
+  --color-surface: #1e1812;
+  --color-border: #332a1d;
+  --color-text: #f2eadb;
+  --color-muted: #a3947c;
+  --color-accent: #f5b82e;
+  --color-accent-deep: #c98a12;
+
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+/* Signature "day timeline" graphic */
+.timeline-block {
+  transform-origin: left center;
+  animation: timeline-grow 0.6s ease-out both;
+}
+
+@keyframes timeline-grow {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-block {
+    animation: none;
+  }
+}
+
+/* Prose (markdown docs) */
+.prose-doc :where(h1, h2, h3) {
+  font-family: var(--font-display);
+  color: var(--color-text);
+}
+
+.prose-doc h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.prose-doc h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-doc p,
+.prose-doc li {
+  color: var(--color-text);
+  line-height: 1.75;
+}
+
+.prose-doc p {
+  margin-bottom: 1rem;
+}
+
+.prose-doc ul,
+.prose-doc ol {
+  margin: 0 0 1rem 1.5rem;
+}
+
+.prose-doc ul {
+  list-style: disc;
+}
+
+.prose-doc ol {
+  list-style: decimal;
+}
+
+.prose-doc a {
+  color: var(--color-accent);
+  text-underline-offset: 2px;
+}
+
+.prose-doc a:hover {
+  color: var(--color-accent-deep);
+}
+
+.prose-doc code {
+  font-family: var(--font-mono);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875em;
+}
+
+.prose-doc pre {
+  font-family: var(--font-mono);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.prose-doc pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Terminal-styled code block with gold prompt */
+.terminal {
+  font-family: var(--font-mono);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.terminal .prompt {
+  color: var(--color-accent);
+  margin-right: 0.5rem;
+}
+
+/* Changelog markdown body inside cards */
+.changelog-body :where(ul, ol) {
+  margin: 0.5rem 0 0.5rem 1.25rem;
+}
+
+.changelog-body ul {
+  list-style: disc;
+}
+
+.changelog-body li {
+  margin-bottom: 0.25rem;
+  color: var(--color-muted);
+}
+
+.changelog-body a {
+  color: var(--color-accent);
+}
+
+.changelog-body code {
+  font-family: var(--font-mono);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.85em;
+}
