@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { fetchTimesheets, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
+import { fetchTimesheets, fetchArchivedTimesheetsInRange, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
 import { fetchHolidays } from '../services/holidays'
 import { confirmDialog } from '../lib/confirm'
@@ -145,18 +145,23 @@ export function Home() {
       return
     }
 
-    const { data, error } = await fetchTimesheets({
-      date_from: ymd(start),
-      date_to: ymd(yesterday),
-      project_id: null,
-      status: 'all',
-    })
-    if (error) {
+    // Rows move to archived_timesheets every Sunday, so a recorded day may live in either table.
+    const [current, archived] = await Promise.all([
+      fetchTimesheets({
+        date_from: ymd(start),
+        date_to: ymd(yesterday),
+        project_id: null,
+        status: 'all',
+      }),
+      fetchArchivedTimesheetsInRange(ymd(start), ymd(yesterday)),
+    ])
+    if (current.error || archived.error) {
       setMissingDays([])
       return
     }
 
-    const recorded = new Set(((data as TimesheetWithProject[]) ?? []).map((t) => t.date_memo.slice(0, 10)))
+    const rows = [...(current.data ?? []), ...(archived.data ?? [])] as TimesheetWithProject[]
+    const recorded = new Set(rows.map((t) => t.date_memo.slice(0, 10)))
     const holidaySet = new Set((holidays ?? []).map((h) => h.date))
     setMissingDays(missingWorkdays(start, yesterday, recorded, holidaySet))
   }
