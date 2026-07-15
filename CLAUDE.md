@@ -37,7 +37,12 @@ The file is gitignored (`*.local`). Users are provisioned via the Supabase dashb
 
 ## Architecture
 
-The Rust layer (`src-tauri/`) is window-hosting only. All business logic lives in TypeScript under `src/`.
+CRUD/business logic lives in TypeScript under `src/`. The Rust layer (`src-tauri/src/lib.rs`) hosts the window **plus** the native-only features:
+
+- **`ask_claude`** (Jira Assistant page): spawns the user's locally-installed `claude` CLI with the prompt and streams progress lines back via Tauri events. No API key is stored — it rides the local Claude Code install.
+- **`open_appsmith_filler`** (Home) / **`open_park_window`** (Park): open the Msync site in a second SSO-preserving webview and inject a pure-DOM fill script (`APPSMITH_FILL_SCRIPT` etc.) into all frames — Msync embeds the real Appsmith app in a cross-origin iframe, so the script relays rows via `postMessage`. Existing windows are reused (recreating forces the full Azure+Duo SSO login again); Rust `eval`s `__timesh1tSendRows(...)` into them. Completion is signalled back by polling the window title / URL hash, since the injected frames have no Tauri IPC.
+
+These features are desktop-only by design: a browser cannot inject scripts cross-origin or spawn local processes, so they cannot move to a plain web deployment (a browser extension + server-side Claude endpoint would be required).
 
 **Auth gate in `App.tsx`:** `supabase.auth.onAuthStateChange` drives two Preact signals — `currentUser` and `authLoading` (from `src/store/auth.ts`). The app renders a spinner while `authLoading` is true, `<Login>` when `currentUser` is null, and the full routed app otherwise. This prevents login-screen flash on re-open because the callback fires synchronously with the cached session.
 
