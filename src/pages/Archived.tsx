@@ -5,6 +5,7 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { fetchArchivedTimesheetsInRange, searchArchived, keywordSearchArchived, indexMissingEmbeddings, type ArchivedMatch } from '../services/timesheets'
 import { ExpandableText } from '../components/ExpandableText'
 import type { TimesheetWithProject } from '../types'
+import { sortByDate, type SortDir } from '../lib/sortDate'
 
 const isTauri = '__TAURI_INTERNALS__' in window
 
@@ -52,6 +53,7 @@ export function Archived() {
   const [endMonth, setEndMonth] = useState(currentMonth())
   const [page, setPage] = useState(0)
   const [projectFilter, setProjectFilter] = useState('')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -172,7 +174,7 @@ export function Archived() {
   }
 
   const projectFilterOptions = projectOptions(rows)
-  const filteredRows = filterByProject(rows, projectFilter)
+  const filteredRows = sortByDate(filterByProject(rows, projectFilter), sortDir)
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
   const visible = filteredRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
 
@@ -320,7 +322,12 @@ export function Archived() {
             <table class="table">
               <thead>
                 <tr class="text-xs uppercase tracking-wide opacity-60">
-                  <th>Date</th>
+                  <th aria-sort={sortDir === 'asc' ? 'ascending' : 'descending'}>
+                    <button class="flex items-center gap-1 uppercase tracking-wide hover:opacity-100"
+                            onClick={() => { setSortDir(sortDir === 'asc' ? 'desc' : 'asc'); setPage(0) }}>
+                      Date <span aria-hidden="true">{sortDir === 'asc' ? '▲' : '▼'}</span>
+                    </button>
+                  </th>
                   <th>Description</th>
                   <th>Project</th>
                   <th>Complete</th>

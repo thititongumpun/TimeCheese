@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import type { TimesheetWithProject } from '../../types'
 import { ExpandableText } from '../ExpandableText'
+import { sortByDate, type SortDir } from '../../lib/sortDate'
 
 interface Props {
   timesheets: TimesheetWithProject[]
@@ -30,10 +31,13 @@ export function TimesheetTable({
   onToggleSelectAll,
 }: Props) {
   const [actionTimesheet, setActionTimesheet] = useState<TimesheetWithProject | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   if (timesheets.length === 0) {
     return <p class="font-mono text-sm opacity-60 py-16 text-center">No timesheet entries found.</p>
   }
+
+  const sorted = sortByDate(timesheets, sortDir)
 
   return (
     <>
@@ -51,7 +55,12 @@ export function TimesheetTable({
                   onChange={(e) => onToggleSelectAll((e.target as HTMLInputElement).checked)}
                 />
               </th>
-              <th>Date</th>
+              <th aria-sort={sortDir === 'asc' ? 'ascending' : 'descending'}>
+                <button class="flex items-center gap-1 uppercase tracking-wide hover:opacity-100"
+                        onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}>
+                  Date <span aria-hidden="true">{sortDir === 'asc' ? '▲' : '▼'}</span>
+                </button>
+              </th>
               <th>Description</th>
               <th>Project</th>
               <th>Complete</th>
@@ -60,7 +69,7 @@ export function TimesheetTable({
             </tr>
           </thead>
           <tbody>
-            {timesheets.map((t) => (
+            {sorted.map((t) => (
               <tr key={t.id} class={selectedIds.has(t.id) ? 'bg-base-200' : 'hover:bg-base-200'}>
                 <td class="w-px">
                   <input

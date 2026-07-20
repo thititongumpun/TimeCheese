@@ -3,6 +3,14 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.11.2] - 2026-07-20
+
+### Added
+
+- **Sortable Date column**: click the Date header on Home and Archived to toggle
+  oldest-first / newest-first. On Archived the sort applies across the whole
+  filtered range, not just the visible page, and jumps back to page 1.
+
 ## [4.11.1] - 2026-07-20
 
 ### Fixed
