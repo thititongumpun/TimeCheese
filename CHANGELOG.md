@@ -3,6 +3,14 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.11.4] - 2026-07-21
+
+### Fixed
+
+- **Copied AI summary no longer has blank lines**: copying a summary from Home
+  or Archived now collapses the blank line between the `[TAG]` header and the
+  bullet list, so the pasted text is tight.
+
 ## [4.11.3] - 2026-07-20
 
 ### Added

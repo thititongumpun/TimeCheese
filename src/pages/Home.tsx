@@ -6,6 +6,7 @@ import { fetchTimesheets, fetchArchivedTimesheetsInRange, deleteTimesheet, updat
 import { fetchActiveProjects } from '../services/projects'
 import { fetchHolidays } from '../services/holidays'
 import { confirmDialog } from '../lib/confirm'
+import { tidySummary } from '../lib/summaryText'
 import { APPSMITH_URL } from '../lib/appsmith'
 import { ymd, periodStart, missingWorkdays } from '../lib/missing-days'
 import { TimesheetTable } from '../components/timesheets/TimesheetTable'
@@ -196,7 +197,7 @@ export function Home() {
   async function handleCopy(text: string, label: string) {
     setActionMessage(null)
     try {
-      await writeText(text)
+      await writeText(tidySummary(text))
       setActionMessage(`${label} copied.`)
     } catch {
       setError(`Could not copy the ${label.toLowerCase()}.`)

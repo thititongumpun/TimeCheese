@@ -6,6 +6,7 @@ import { fetchArchivedTimesheetsInRange, searchArchived, keywordSearchArchived, 
 import { ExpandableText } from '../components/ExpandableText'
 import type { TimesheetWithProject } from '../types'
 import { sortByDate, type SortDir } from '../lib/sortDate'
+import { tidySummary } from '../lib/summaryText'
 
 const isTauri = '__TAURI_INTERNALS__' in window
 
@@ -168,7 +169,7 @@ export function Archived() {
   }
 
   async function copySummary(id: string, summary: string) {
-    await writeText(summary)
+    await writeText(tidySummary(summary))
     setCopiedId(id)
     setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 2000)
   }
