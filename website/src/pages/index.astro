@@ -59,6 +59,12 @@ const specRows = [
     pro: true,
   },
   {
+    name: 'Non-project Msync auto-fill',
+    desc: 'Rows on the non-project code (MFE260055) file as “Non Project”, with the task picked by project name. Mixed batches work.',
+    free: true,
+    pro: true,
+  },
+  {
     name: 'Park auto-fill',
     desc: 'Carpark registration autofill with vehicle management.',
     free: true,
@@ -318,14 +324,6 @@ const specRows = [
                 <td class:list={['py-3 text-center', row.pro ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]']}>{row.pro ? '✓' : '—'}</td>
               </tr>
             ))}
-            <tr>
-              <td class="py-3 pr-4">
-                <span class="font-semibold">Non-project Msync auto-fill</span>
-                <span class="block text-[var(--color-muted)] text-xs mt-0.5">LEAVE, meetings, and other non-project rows filled the same way.</span>
-              </td>
-              <td class="py-3 text-center font-mono text-[10px] text-[var(--color-muted)]">planned</td>
-              <td class="py-3 text-center font-mono text-[10px] text-[var(--color-muted)]">planned</td>
-            </tr>
           </tbody>
         </table>
       </div>
