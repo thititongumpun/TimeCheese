@@ -3,6 +3,35 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.12.0] - 2026-07-22
+
+### Added
+
+- **Non Project timesheets in the Msync filler**: entries whose project code is
+  `MFE260055` now set Project Type to "Non Project" and pick the task whose name
+  matches the project name exactly. Regular entries set Project Type back to
+  "Project", so a batch can mix both. A task-name mismatch stops the run instead
+  of filing to the wrong task.
+- **Sortable Status column on Projects**: click the header to group Active or
+  Inactive first; the initial view keeps the server order.
+
+### Fixed
+
+- **Project delete now reports why it failed**: a delete that removes no rows
+  says so (RLS or an already-deleted row) instead of appearing to succeed, and
+  the list reloads either way.
+- **AI summaries no longer invent placeholder tags**: a tagless entry like
+  `VACTION` was being expanded into a sentence with a made-up `[DATE]` tag. The
+  prompt now forbids adding information, and any bracket tag absent from the
+  input is unwrapped.
+
+### Changed
+
+- TypeScript upgraded to 7.0 — typecheck runs about 3× faster; no source changes
+  were needed.
+- Test setup restores `localStorage`/`sessionStorage`, which vitest 4's jsdom
+  environment leaves undefined on `globalThis`. Fixes 4 failing tests.
+
 ## [4.11.4] - 2026-07-21
 
 ### Fixed

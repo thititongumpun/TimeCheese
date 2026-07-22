@@ -19,5 +19,11 @@ export async function updateProject(id: string, data: Partial<ProjectInput>) {
 }
 
 export async function deleteProject(id: string) {
-  return supabase.from('projects').delete().eq('id', id)
+  // .select() so a silent RLS block (0 rows, no error) is distinguishable from a real delete.
+  const { data, error } = await supabase.from('projects').delete().eq('id', id).select()
+  if (!error && !data?.length) {
+    // Either RLS has no DELETE policy or the row is already gone — PostgREST can't tell us which.
+    return { data, error: { message: 'Nothing was deleted — the project is already gone, or RLS blocks DELETE.' } }
+  }
+  return { data, error }
 }

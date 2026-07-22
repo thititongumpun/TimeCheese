@@ -4214,7 +4214,7 @@ dependencies = [
 
 [[package]]
 name = "timesh1t"
-version = "4.11.4"
+version = "4.12.0"
 dependencies = [
  "serde",
  "serde_json",

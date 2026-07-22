@@ -17,6 +17,7 @@ Rules:
 - A square-bracket tag must sit alone on its own line. Move any text that follows it on the same line down to the next line.
 - Every line of body text (anything that is not a bracket tag) must start with "- ". Add the dash if it is missing; keep existing dashes.
 - Fix typos, grammar, and unclear phrasing. Keep the original meaning and line breaks between separate items.
+- NEVER add information that is not in the input. No invented dates, names, placeholders, or extra clauses. A one-word input stays one word, spelled correctly.
 - Return ONLY the corrected text. No explanation, no preamble.
 
 Example input:
@@ -58,6 +59,17 @@ export function restoreBracketTags(original: string, summary: string): string {
     }
   }
   return out
+}
+
+// The model sometimes invents placeholder tags ("VACTION" -> "Vacation from [DATE] to [DATE]").
+// Any bracket tag that wasn't in the original is not ours — unwrap it, keeping the inner text.
+// Only acts when the input had NO tags at all — then every bracket in the output is the
+// model's invention. Once the input has tags we keep hands off: matching output tags back to
+// input ones is guesswork (the model may have respelled them) and restoreBracketTags owns
+// that case. ponytail: an invented tag alongside real ones survives; hasn't come up.
+export function dropInventedTags(original: string, summary: string): string {
+  if (/\[[^\]]+\]/.test(original)) return summary
+  return summary.replace(/\[([^\]]+)\]/g, '$1')
 }
 
 interface AiBinding {
@@ -181,7 +193,7 @@ export default {
         return json({ error: 'Cloudflare AI returned an empty summary.' }, 502)
       }
 
-      return json({ summary: restoreBracketTags(description, summary) })
+      return json({ summary: dropInventedTags(description, restoreBracketTags(description, summary)) })
     } catch (err) {
       // ponytail: surface the real reason so the next failure isn't blind
       const reason = err instanceof Error ? err.message : 'unknown error'

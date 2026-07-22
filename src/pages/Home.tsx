@@ -297,6 +297,8 @@ export function Home() {
     const rows = sent.map((t) => ({
       date: t.date_memo, // raw ISO — the fill script formats it for the date picker
       projectNo: t.projects?.project_no ?? '',
+      // Non-project rows (project_no MFE260055) pick the task by this name; ignored otherwise.
+      taskName: t.projects?.project_name ?? '',
       // Msync's Memo gets the AI summary; fall back to the raw description when absent.
       description: t.ai_summary || t.description,
       // "HH:MM:SS" or null (pre-v4.1.0 rows) — null leaves Msync's 09:00/18:00 defaults.

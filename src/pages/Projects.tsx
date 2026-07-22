@@ -31,8 +31,8 @@ export function Projects() {
   async function handleDelete(id: string) {
     if (!(await confirmDialog('Delete this project?'))) return
     const { error } = await deleteProject(id)
-    if (error) setError(error.message)
-    else load()
+    setError(error?.message ?? null)
+    load() // reload either way — a "nothing deleted" row may simply be stale
   }
 
   function handleModalClose() {

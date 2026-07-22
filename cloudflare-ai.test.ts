@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { restoreBracketTags } from './cloudflare-ai'
+import { restoreBracketTags, dropInventedTags } from './cloudflare-ai'
 
 describe('restoreBracketTags', () => {
   it('restores a truncated multi-tag run', () => {
@@ -24,5 +24,16 @@ describe('restoreBracketTags', () => {
     const original = '[INVX]\n[IMP][PersonnelCost]'
     const summary = '[INVX]\n[IMP]'
     expect(restoreBracketTags(original, summary)).toBe('[INVX]\n[IMP][PersonnelCost]')
+  })
+})
+
+describe('dropInventedTags', () => {
+  it('unwraps a tag the model invented', () => {
+    expect(dropInventedTags('VACTION', '- Vacation from [DATE] to [DATE].'))
+      .toBe('- Vacation from DATE to DATE.')
+  })
+
+  it('keeps tags that were in the original', () => {
+    expect(dropInventedTags('[IMP] fix', '[IMP]\n- Fix.')).toBe('[IMP]\n- Fix.')
   })
 })

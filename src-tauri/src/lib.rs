@@ -275,6 +275,9 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
     selectFilter: '.select-popover-wrapper input.bp3-input',
     selectOption: '.select-popover-wrapper .menu-item-text',
     memo: '.t--widget-memocopy textarea, .t--widget-memocopy input',
+    // "Project Type" radios: value Y = Project, N = Non Project. Matched by label text too —
+    // Y/N is a common option pair, so the value alone could hit another radio group.
+    projectType: 'input[type="radio"][name^="Blueprint3.RadioGroup"]',
     // bottom-right "Create" — only match once enabled (it stays disabled until the form is valid)
     createBtn: '.t--widget-button6copy button:not([disabled]):not(.bp3-disabled)',
   };
@@ -321,15 +324,42 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
     }
   }
 
-  // Prefer the task whose name includes 'IMP'; fall back to the first row.
+  // Non-project rows all share one project code; the task IS the project name.
+  const NON_PROJECT_NO = 'MFE260055';
+
+  // Project Type radio — Y = Project, N = Non Project. Set per row: a previous row may
+  // have left the other value selected.
+  async function setProjectType(row) {
+    const nonProject = row.projectNo === NON_PROJECT_NO;
+    const want = nonProject ? 'N' : 'Y';
+    const label = nonProject ? 'non project' : 'project';
+    await waitFor(SEL.projectType, 15000);
+    const radio = [...document.querySelectorAll(SEL.projectType)].find((r) =>
+      r.value === want && (r.closest('label')?.textContent || '').trim().toLowerCase() === label);
+    if (!radio) throw new Error('Project Type radio "' + label + '" not found');
+    if (radio.checked) return;
+    radio.click();
+    await sleep(STEP_WAIT); // project list re-queries on type change
+  }
+
+  // Non-project: the task must equal the project name exactly (fail loudly on a mismatch —
+  // filing to the wrong task is worse than stopping). Otherwise prefer 'IMP', then first row.
   // Click the cell, not the row wrapper — Appsmith only registers selection on the cell.
   // Clicking TOGGLES: a click on an already-selected row deselects it, so skip in that case
   // (happens when the task list has a single, auto-selected row).
-  function clickTask() {
+  function clickTask(row) {
     const rows = [...document.querySelectorAll(SEL.taskRow)];
-    const task = rows.find((r) => r.textContent.includes('IMP'))
-      || rows.find((r) => r.textContent.includes('PRESALE'))
-      || rows[0];
+    let task;
+    if (row.projectNo === NON_PROJECT_NO) {
+      const want = (row.taskName || '').trim();
+      task = rows.find((r) => r.textContent.trim() === want)
+        || rows.find((r) => [...r.querySelectorAll('.td')].some((c) => c.textContent.trim() === want));
+      if (!task) throw new Error('task "' + want + '" not found in the Non Project task list');
+    } else {
+      task = rows.find((r) => r.textContent.includes('IMP'))
+        || rows.find((r) => r.textContent.includes('PRESALE'))
+        || rows[0];
+    }
     if (!task) return;
     if (task.className.includes('selected')) return; // already selected — clicking would disable it
     (task.querySelector('.td') || task).click();
@@ -352,6 +382,7 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
       await waitFor(SEL.projectTable, 20000);
       await sleep(STEP_WAIT);
     }
+    await setProjectType(row);
     const search = await waitFor(SEL.projectSearch);
     setNativeValue(search, row.projectNo);
     await sleep(1000); // let the table filter
@@ -363,13 +394,13 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
     setNativeValue(await waitFor(SEL.memo), row.description);
     await sleep(300);
     await waitFor(SEL.taskRow, 20000);
-    clickTask();
+    clickTask(row);
     await sleep(400);
     // Create stays disabled if the task ended up deselected (toggle) — click it back on.
     let create = null;
     for (let attempt = 0; attempt < 3 && !create; attempt++) {
       create = await waitFor(SEL.createBtn, 5000).catch(() => null);
-      if (!create) { clickTask(); await sleep(400); }
+      if (!create) { clickTask(row); await sleep(400); }
     }
     if (!create) throw new Error('Create never enabled — task selection not registering');
     create.click();
