@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { fetchTimesheets, fetchArchivedTimesheetsInRange, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
+import { agentProvider } from '../lib/agent'
 import { fetchHolidays } from '../services/holidays'
 import { confirmDialog } from '../lib/confirm'
 import { tidySummary } from '../lib/summaryText'
@@ -245,19 +246,20 @@ export function Home() {
         .filter((item) => filters.status === 'incomplete' ? !item.is_complete : true))
     }
 
-    // Live progress from the streaming claude run lands in the action banner.
-    const unlisten = await listen<string>('claude-progress', (ev) => {
+    // Live progress from the streaming agent run lands in the action banner.
+    const unlisten = await listen<string>('agent-progress', (ev) => {
       setActionMessage(`Jira: ${ev.payload}`)
     })
     try {
-      const out = await invoke<string>('ask_claude', {
+      const out = await invoke<string>('ask_agent', {
         prompt: `Find the Jira issue for this work and transition it to Done. Work: "${timesheet.description}"`,
+        provider: agentProvider.value,
       })
       setActionMessage(`Timesheet marked done. Jira: ${out.slice(0, 200) || 'done.'}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      setError(msg === 'CLAUDE_NOT_INSTALLED'
-        ? 'Timesheet marked done. Jira not set up — open the Jira tab to connect Claude Code.'
+      setError(msg === 'AGENT_NOT_INSTALLED'
+        ? 'Timesheet marked done. Jira not set up — open the Jira tab to connect an AI CLI.'
         : `Timesheet marked done, but the Jira step failed: ${msg}`)
     } finally {
       unlisten()

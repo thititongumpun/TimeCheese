@@ -23,11 +23,11 @@ fn augmented_path() -> std::ffi::OsString {
     std::env::join_paths(paths).unwrap_or(existing)
 }
 
-// Build a `claude` command. On Windows, suppress the console window that would otherwise
-// flash on every spawn (CREATE_NO_WINDOW).
-fn claude_command() -> std::process::Command {
+// Build a command for one of the agent CLIs. On Windows, suppress the console window that
+// would otherwise flash on every spawn (CREATE_NO_WINDOW).
+fn cli_command(bin: &str) -> std::process::Command {
     #[allow(unused_mut)]
-    let mut cmd = std::process::Command::new("claude");
+    let mut cmd = std::process::Command::new(bin);
     #[cfg(not(windows))]
     cmd.env("PATH", augmented_path());
     #[cfg(windows)]
@@ -36,6 +36,80 @@ fn claude_command() -> std::process::Command {
         cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
     }
     cmd
+}
+
+// Which CLI actually runs. Both are driven headlessly and talk to the same Atlassian MCP.
+#[derive(Clone, Copy, PartialEq)]
+enum Agent {
+    Claude,
+    Codex,
+}
+
+impl Agent {
+    fn bin(self) -> &'static str {
+        match self {
+            Agent::Claude => "claude",
+            Agent::Codex => "codex",
+        }
+    }
+    fn name(self) -> &'static str {
+        self.bin()
+    }
+}
+
+// The user's preference, straight off the Tauri command argument.
+#[derive(serde::Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+enum Provider {
+    Auto,
+    Claude,
+    Codex,
+}
+
+// Auto = first installed, Claude before Codex. Used identically by ask_agent and
+// agent_status, so the status the user sees always names the CLI that will run.
+fn pick(p: Provider, claude_installed: bool, codex_installed: bool) -> Option<Agent> {
+    match p {
+        Provider::Auto => {
+            if claude_installed {
+                Some(Agent::Claude)
+            } else if codex_installed {
+                Some(Agent::Codex)
+            } else {
+                None
+            }
+        }
+        Provider::Claude => claude_installed.then_some(Agent::Claude),
+        Provider::Codex => codex_installed.then_some(Agent::Codex),
+    }
+}
+
+// Exit status only — codex's `--version` output format isn't stable enough to parse.
+fn installed(agent: Agent) -> bool {
+    cli_command(agent.bin())
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+// True when `claude mcp list` shows an atlassian server whose status segment is exactly
+// "connected". The status is whatever follows the LAST " - " (MCP command strings can
+// contain " - " themselves), minus the ✔/!/✘ prefix Claude decorates it with.
+// A plain `contains("connected")` would also match "not connected" and "disconnected".
+fn claude_mcp_connected(stdout: &str) -> bool {
+    stdout.lines().any(|line| {
+        let lower = line.to_lowercase();
+        if !lower.contains("atlassian") {
+            return false;
+        }
+        match lower.rsplit(" - ").next() {
+            Some(status) => {
+                status.trim_matches(|c: char| !c.is_alphanumeric()).trim() == "connected"
+            }
+            None => false,
+        }
+    })
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -88,7 +162,7 @@ fn grammar_check(text: String) -> Vec<GrammarLint> {
 }
 
 // Turn one stream-json line from `claude` into a short human progress label, or None.
-fn progress_label(line: &str) -> Option<String> {
+fn claude_progress_label(line: &str) -> Option<String> {
     let v: serde_json::Value = serde_json::from_str(line).ok()?;
     match v.get("type")?.as_str()? {
         "assistant" => {
@@ -116,47 +190,127 @@ fn progress_label(line: &str) -> Option<String> {
     }
 }
 
-// Run the local `claude` CLI headlessly and return its final text. Streams step-by-step
-// progress to the frontend via the "claude-progress" event as Claude works. The Atlassian
-// (Jira) MCP is configured per-user in Claude Code itself, so no token lives in this app.
+// `codex exec --json` emits JSONL on stdout: {"type":"item.started"|"item.completed"|…,
+// "item":{"type":"mcp_tool_call"|"agent_message"|…}}. Labels come off `item.started` only
+// so a tool isn't announced twice (started + completed both fire for the same id).
+// Wording deliberately matches the Claude branch so the progress list reads the same.
+fn codex_progress_label(line: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(line).ok()?;
+    let kind = v.get("type")?.as_str()?;
+    let item = v.get("item")?;
+    match (kind, item.get("type")?.as_str()?) {
+        ("item.started", "mcp_tool_call") => {
+            // ponytail: `tool` vs `name` is unverified without codex installed — try both.
+            let name = item
+                .get("tool")
+                .and_then(|t| t.as_str())
+                .or_else(|| item.get("name").and_then(|n| n.as_str()))
+                .unwrap_or("tool");
+            let short = name.rsplit("__").next().unwrap_or(name);
+            Some(format!("Using {short}…"))
+        }
+        ("item.started", "command_execution") => {
+            let cmd = item.get("command").and_then(|c| c.as_str()).unwrap_or("");
+            let short: String = cmd.chars().take(60).collect();
+            Some(format!("Running {short}…"))
+        }
+        ("item.completed", "agent_message") => {
+            let t = item.get("text").and_then(|t| t.as_str()).unwrap_or("").trim();
+            (!t.is_empty()).then(|| t.chars().take(120).collect())
+        }
+        _ => None,
+    }
+}
+
+// The final answer is the LAST completed agent_message; the caller overwrites on each Some.
+fn codex_answer(line: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(line).ok()?;
+    if v.get("type")?.as_str()? != "item.completed" {
+        return None;
+    }
+    let item = v.get("item")?;
+    if item.get("type")?.as_str()? != "agent_message" {
+        return None;
+    }
+    Some(item.get("text")?.as_str()?.to_string())
+}
+
+const JIRA_SYSTEM_PROMPT: &str =
+    "You are a Jira assistant acting through the Atlassian MCP. Do whatever the \
+     user asks — create issues, edit summary/description/fields, add comments, \
+     assign, or transition status. Resolve issue keys or search by description \
+     as needed. Do not touch any database; the timesheet is handled by the \
+     T1meSh1t app.";
+
+// Run the user's agent CLI (Claude Code or Codex) headlessly and return its final text.
+// Streams step-by-step progress to the frontend via the "agent-progress" event. The
+// Atlassian (Jira) MCP is configured per-user inside the CLI, so no token lives here.
 // Runs on a blocking thread so the webview stays responsive during the call.
 #[tauri::command]
-async fn ask_claude(app: tauri::AppHandle, prompt: String) -> Result<String, String> {
+async fn ask_agent(
+    app: tauri::AppHandle,
+    prompt: String,
+    provider: Provider,
+) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        // ponytail: bypassPermissions runs the Jira MCP tools without an interactive
-        // prompt (impossible in headless mode). Blast radius = this user's own Atlassian
-        // MCP. Upgrade path: --allowedTools "mcp__atlassian__*" to forbid any other tool.
-        let mut child = claude_command()
-            .args([
-                "-p",
-                &prompt,
-                // stream-json (+ --verbose, required with -p) emits one JSON event per step
-                // so we can surface live progress instead of one opaque wait.
-                "--output-format",
-                "stream-json",
-                "--verbose",
-                "--permission-mode",
-                "bypassPermissions",
-                "--append-system-prompt",
-                "You are a Jira assistant acting through the Atlassian MCP. Do whatever the \
-                 user asks — create issues, edit summary/description/fields, add comments, \
-                 assign, or transition status. Resolve issue keys or search by description \
-                 as needed. Do not touch any database; the timesheet is handled by the \
-                 T1meSh1t app.",
-            ])
+        let agent = pick(provider, installed(Agent::Claude), installed(Agent::Codex))
+            .ok_or_else(|| "AGENT_NOT_INSTALLED".to_string())?;
+
+        // Codex has no --append-system-prompt, so the system prompt rides in the prompt text.
+        let codex_prompt = format!("{JIRA_SYSTEM_PROMPT}\n\n---\n\nTask: {prompt}");
+        let mut cmd = cli_command(agent.bin());
+        match agent {
+            // ponytail: bypassPermissions runs the Jira MCP tools without an interactive
+            // prompt (impossible in headless mode). Blast radius = this user's own Atlassian
+            // MCP. Upgrade path: --allowedTools "mcp__atlassian__*" to forbid any other tool.
+            Agent::Claude => {
+                cmd.args([
+                    "-p",
+                    &prompt,
+                    // stream-json (+ --verbose, required with -p) emits one JSON event per step
+                    // so we can surface live progress instead of one opaque wait.
+                    "--output-format",
+                    "stream-json",
+                    "--verbose",
+                    "--permission-mode",
+                    "bypassPermissions",
+                    "--append-system-prompt",
+                    JIRA_SYSTEM_PROMPT,
+                ]);
+            }
+            Agent::Codex => {
+                // --skip-git-repo-check is mandatory: codex refuses to run outside a git repo
+                // and a packaged desktop app's cwd is not one. No sandbox flag — `codex exec`
+                // hardcodes approvals to Never and its read-only default is right for
+                // MCP-only work that writes no files.
+                cmd.args(["exec", "--json", "--skip-git-repo-check", &codex_prompt]);
+                if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+                    cmd.current_dir(home);
+                }
+            }
+        }
+
+        let mut child = cmd
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| {
                 if e.kind() == std::io::ErrorKind::NotFound {
-                    "CLAUDE_NOT_INSTALLED".to_string()
+                    "AGENT_NOT_INSTALLED".to_string()
                 } else {
-                    format!("failed to run claude CLI: {e}")
+                    format!("failed to run {} CLI: {e}", agent.name())
                 }
             })?;
 
         let stdout = child.stdout.take().expect("stdout piped");
-        let mut stderr = child.stderr.take().expect("stderr piped");
+        // Drain stderr concurrently: codex writes its whole progress log there, so reading
+        // it only after stdout EOF would deadlock once the pipe buffer fills.
+        let mut pipe = child.stderr.take().expect("stderr piped");
+        let errs = std::thread::spawn(move || {
+            let mut s = String::new();
+            pipe.read_to_string(&mut s).ok();
+            s
+        });
         let mut result = String::new();
 
         for line in BufReader::new(stdout).lines() {
@@ -164,30 +318,45 @@ async fn ask_claude(app: tauri::AppHandle, prompt: String) -> Result<String, Str
             if line.trim().is_empty() {
                 continue;
             }
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
-                if v.get("type").and_then(|t| t.as_str()) == Some("result") {
-                    if let Some(r) = v.get("result").and_then(|r| r.as_str()) {
-                        result = r.to_string();
+            let label = match agent {
+                Agent::Claude => {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
+                        if v.get("type").and_then(|t| t.as_str()) == Some("result") {
+                            if let Some(r) = v.get("result").and_then(|r| r.as_str()) {
+                                result = r.to_string();
+                            }
+                        }
                     }
+                    claude_progress_label(&line)
                 }
-            }
-            if let Some(label) = progress_label(&line) {
-                let _ = app.emit("claude-progress", label);
+                Agent::Codex => {
+                    if let Some(text) = codex_answer(&line) {
+                        result = text;
+                    }
+                    codex_progress_label(&line)
+                }
+            };
+            if let Some(label) = label {
+                let _ = app.emit("agent-progress", label);
             }
         }
 
         let status = child.wait().map_err(|e| e.to_string())?;
+        let err = errs.join().unwrap_or_default();
         if status.success() {
+            // Codex can exit 0 on a turn.failed with nothing produced; an empty answer is
+            // a failure rather than a blank success.
+            if agent == Agent::Codex && result.trim().is_empty() {
+                return Err("Codex returned no answer".to_string());
+            }
             Ok(result)
         } else {
-            // ponytail: claude's stderr is small, so reading it after stdout EOF won't deadlock.
-            let mut err = String::new();
-            stderr.read_to_string(&mut err).ok();
-            let err = err.trim();
-            Err(if err.is_empty() {
-                "claude exited with an error".to_string()
+            // Codex's stderr is a full log — the useful message is the last line.
+            let last = err.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").trim();
+            Err(if last.is_empty() {
+                format!("{} exited with an error", agent.name())
             } else {
-                err.to_string()
+                last.to_string()
             })
         }
     })
@@ -195,31 +364,87 @@ async fn ask_claude(app: tauri::AppHandle, prompt: String) -> Result<String, Str
     .map_err(|e| e.to_string())?
 }
 
-// Report Claude Code setup so the UI can gate: no_cli / no_jira_mcp / ready.
-#[tauri::command]
-async fn claude_status() -> &'static str {
-    tauri::async_runtime::spawn_blocking(|| {
-        if claude_command().arg("--version").output().is_err() {
-            return "no_cli";
-        }
+#[derive(serde::Serialize)]
+struct AgentStatus {
+    provider: &'static str,
+    state: &'static str,
+}
+
+// Is the Atlassian MCP configured AND authenticated for this agent?
+fn mcp_state(agent: Agent) -> &'static str {
+    match agent {
         // `claude mcp list` prints one line per server, e.g.
         //   atlassian: https://… (HTTP) - ✔ Connected
         //   atlassian: https://… (HTTP) - ! Needs authentication
-        // Require the atlassian line to actually be Connected — a configured-but-unauth'd
-        // server can't transition issues, so it's not "ready".
-        match claude_command().args(["mcp", "list"]).output() {
-            Ok(o) => {
-                let text = String::from_utf8_lossy(&o.stdout).to_lowercase();
-                let connected = text
-                    .lines()
-                    .any(|line| line.contains("atlassian") && line.contains("connected"));
-                if connected { "ready" } else { "no_jira_mcp" }
-            }
-            Err(_) => "no_cli",
+        // A configured-but-unauth'd server can't transition issues, so it's not "ready".
+        Agent::Claude => match cli_command("claude").args(["mcp", "list"]).output() {
+            Ok(o) if claude_mcp_connected(&String::from_utf8_lossy(&o.stdout)) => "ready",
+            // The CLI is known installed by now, so a failure here is an MCP problem.
+            _ => "no_jira_mcp",
+        },
+        // `codex mcp list --json` prints a pretty-printed JSON array — parse the whole
+        // buffer, not line by line.
+        // ponytail: the auth_status value set is unverified without codex installed, so the
+        // match is deliberately permissive — a wrong guess should surface as a runtime codex
+        // error, not an inescapable setup card. Tighten once confirmed.
+        Agent::Codex => {
+            let out = match cli_command("codex").args(["mcp", "list", "--json"]).output() {
+                Ok(o) => o.stdout,
+                Err(_) => return "no_jira_mcp",
+            };
+            let servers: serde_json::Value = match serde_json::from_slice(&out) {
+                Ok(v) => v,
+                Err(_) => return "no_jira_mcp",
+            };
+            let usable = servers.as_array().is_some_and(|list| {
+                list.iter().any(|s| {
+                    let named = s
+                        .get("name")
+                        .and_then(|n| n.as_str())
+                        .is_some_and(|n| n.to_lowercase().contains("atlassian"));
+                    let enabled = s.get("enabled") != Some(&serde_json::Value::Bool(false));
+                    let not_disabled = s
+                        .get("disabled_reason")
+                        .map_or(true, |d| d.is_null());
+                    let authed = s.get("auth_status").and_then(|a| a.as_str()).map_or(true, |a| {
+                        let a = a.to_lowercase();
+                        a != "not_logged_in" && a != "unauthenticated"
+                    });
+                    named && enabled && not_disabled && authed
+                })
+            });
+            if usable { "ready" } else { "no_jira_mcp" }
+        }
+    }
+}
+
+// Report agent CLI setup so the UI can gate: no_cli / no_jira_mcp / ready, plus which
+// CLI will actually run so the setup cards show the right instructions.
+#[tauri::command]
+async fn agent_status(provider: Provider) -> AgentStatus {
+    tauri::async_runtime::spawn_blocking(move || {
+        match pick(provider, installed(Agent::Claude), installed(Agent::Codex)) {
+            Some(agent) => AgentStatus {
+                provider: agent.name(),
+                state: mcp_state(agent),
+            },
+            // A *forced* provider echoes its own name so the card shows its install steps;
+            // only auto-with-neither-installed reports "none".
+            None => AgentStatus {
+                provider: match provider {
+                    Provider::Auto => "none",
+                    Provider::Claude => "claude",
+                    Provider::Codex => "codex",
+                },
+                state: "no_cli",
+            },
         }
     })
     .await
-    .unwrap_or("no_cli")
+    .unwrap_or(AgentStatus {
+        provider: "none",
+        state: "no_cli",
+    })
 }
 
 // Injected into the Appsmith page. Plain DOM only — the remote webview gets no Tauri IPC.
@@ -843,7 +1068,7 @@ async fn open_park_window(
 
 #[cfg(test)]
 mod tests {
-    use super::grammar_check;
+    use super::*;
 
     #[test]
     fn flags_a_typo_and_points_at_it() {
@@ -862,6 +1087,134 @@ mod tests {
     fn leaves_clean_text_alone() {
         assert!(grammar_check("Fixed the login bug.".to_string()).is_empty());
     }
+
+    // Real `claude mcp list` output from a dev machine.
+    const CONNECTED: &str =
+        "plugin:atlassian:atlassian: https://mcp.atlassian.com/v1/mcp/authv2 (HTTP) - ✔ Connected";
+    const NEEDS_AUTH: &str =
+        "atlassian: https://mcp.atlassian.com/v1/sse (SSE) - ! Needs authentication";
+
+    #[test]
+    fn claude_mcp_connected_requires_exact_connected_status() {
+        assert!(claude_mcp_connected(CONNECTED));
+        assert!(claude_mcp_connected(
+            "atlassian: https://x (HTTP) - ✔ Connected"
+        ));
+        assert!(!claude_mcp_connected(NEEDS_AUTH));
+        assert!(!claude_mcp_connected(
+            "atlassian: https://x (HTTP) - ✘ Failed to connect"
+        ));
+        // These two pass under the old `contains("connected")` check — the regression guard.
+        assert!(!claude_mcp_connected("atlassian: https://x (HTTP) - Disconnected"));
+        assert!(!claude_mcp_connected("atlassian: https://x (HTTP) - Not connected"));
+    }
+
+    #[test]
+    fn claude_mcp_connected_ignores_other_servers() {
+        assert!(!claude_mcp_connected("codegraph: stdio - ✔ Connected"));
+    }
+
+    #[test]
+    fn claude_label_names_the_mcp_tool() {
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__atlassian__transitionJiraIssue"}]}}"#;
+        assert_eq!(
+            claude_progress_label(line),
+            Some("Using transitionJiraIssue…".to_string())
+        );
+    }
+
+    #[test]
+    fn claude_label_truncates_text_to_120_chars() {
+        let text = "x".repeat(200);
+        let line = format!(
+            r#"{{"type":"assistant","message":{{"content":[{{"type":"text","text":"{text}"}}]}}}}"#
+        );
+        let label = claude_progress_label(&line).expect("text label");
+        assert_eq!(label.chars().count(), 120);
+    }
+
+    #[test]
+    fn claude_label_reads_tool_results_as_user() {
+        assert_eq!(
+            claude_progress_label(r#"{"type":"user"}"#),
+            Some("Reading Jira response…".to_string())
+        );
+    }
+
+    #[test]
+    fn claude_label_ignores_other_events() {
+        assert_eq!(claude_progress_label(r#"{"type":"result","result":"done"}"#), None);
+        assert_eq!(claude_progress_label("not json"), None);
+    }
+
+    // Verbatim sample events from the codex exec --json docs.
+    const CODEX_SAMPLE: [&str; 4] = [
+        r#"{"type":"thread.started","thread_id":"0199a213-x"}"#,
+        r#"{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"bash -lc ls","status":"in_progress"}}"#,
+        r#"{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"Repo contains docs, sdk, and examples directories."}}"#,
+        r#"{"type":"turn.completed","usage":{}}"#,
+    ];
+
+    #[test]
+    fn codex_label_maps_the_four_sample_events() {
+        let labels: Vec<String> = CODEX_SAMPLE.iter().filter_map(|l| codex_progress_label(l)).collect();
+        assert_eq!(
+            labels,
+            vec![
+                "Running bash -lc ls…".to_string(),
+                "Repo contains docs, sdk, and examples directories.".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn codex_label_emits_a_tool_once_not_twice() {
+        let started = r#"{"type":"item.started","item":{"id":"i1","type":"mcp_tool_call","tool":"mcp__atlassian__transitionJiraIssue","status":"in_progress"}}"#;
+        let completed = r#"{"type":"item.completed","item":{"id":"i1","type":"mcp_tool_call","tool":"mcp__atlassian__transitionJiraIssue","status":"completed"}}"#;
+        assert_eq!(
+            codex_progress_label(started),
+            Some("Using transitionJiraIssue…".to_string())
+        );
+        assert_eq!(codex_progress_label(completed), None);
+    }
+
+    #[test]
+    fn codex_answer_takes_the_last_agent_message() {
+        let fold = |lines: &[&str]| {
+            lines.iter().fold(None, |acc, l| codex_answer(l).or(acc))
+        };
+        assert_eq!(
+            fold(&CODEX_SAMPLE),
+            Some("Repo contains docs, sdk, and examples directories.".to_string())
+        );
+
+        let mut with_final = CODEX_SAMPLE.to_vec();
+        with_final
+            .push(r#"{"type":"item.completed","item":{"id":"i9","type":"agent_message","text":"final"}}"#);
+        assert_eq!(fold(&with_final), Some("final".to_string()));
+    }
+
+    #[test]
+    fn codex_parsers_ignore_junk() {
+        for line in ["", "not json", r#"{"type":"error","message":"boom"}"#] {
+            assert_eq!(codex_progress_label(line), None);
+            assert_eq!(codex_answer(line), None);
+        }
+    }
+
+    #[test]
+    fn pick_auto_prefers_claude() {
+        assert!(matches!(pick(Provider::Auto, true, true), Some(Agent::Claude)));
+        assert!(matches!(pick(Provider::Auto, false, true), Some(Agent::Codex)));
+        assert!(pick(Provider::Auto, false, false).is_none());
+    }
+
+    #[test]
+    fn pick_forced_provider_requires_it_installed() {
+        assert!(pick(Provider::Codex, true, false).is_none());
+        assert!(matches!(pick(Provider::Codex, false, true), Some(Agent::Codex)));
+        assert!(pick(Provider::Claude, false, true).is_none());
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -878,7 +1231,7 @@ pub fn run() {
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, ask_claude, claude_status, open_appsmith_filler, open_park_window, grammar_check])
+        .invoke_handler(tauri::generate_handler![greet, ask_agent, agent_status, open_appsmith_filler, open_park_window, grammar_check])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

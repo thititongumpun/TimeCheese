@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
-import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, type ArchivedMatch } from '../../services/timesheets'
+import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, fetchPreviousEntryText, type ArchivedMatch } from '../../services/timesheets'
 import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
 import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
 import type { TimesheetWithProject, Project, TimesheetInput } from '../../types'
@@ -31,6 +31,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<ArchivedMatch[]>([])
+  const [loadingPrevious, setLoadingPrevious] = useState(false)
   // Lints are kept with the exact text they were computed from — spans are offsets into
   // that text, so applying one against newer text would splice the wrong characters.
   const [linted, setLinted] = useState<{ text: string; lints: GrammarLint[] }>({ text: '', lints: [] })
@@ -62,6 +63,20 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
     }, 400)
     return () => clearTimeout(timer)
   }, [description])
+
+  async function usePreviousEntry() {
+    setLoadingPrevious(true)
+    setError(null)
+    try {
+      const text = await fetchPreviousEntryText()
+      if (text) setDescription(text)
+      else setError('No previous entry to copy from.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load the previous entry.')
+    } finally {
+      setLoadingPrevious(false)
+    }
+  }
 
   async function handleSubmit(e: Event) {
     e.preventDefault()
@@ -168,7 +183,20 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
             </div>
           </div>
           <div class="fieldset mb-3">
-            <label class="label" for="description">Description</label>
+            <div class="flex items-center justify-between gap-2">
+              <label class="label" for="description">Description</label>
+              {!timesheet && (
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-xs"
+                  disabled={loadingPrevious}
+                  onClick={usePreviousEntry}
+                >
+                  {loadingPrevious && <span class="loading loading-spinner loading-xs" />}
+                  Same as previous
+                </button>
+              )}
+            </div>
             <textarea
               id="description"
               class="textarea w-full"

@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
-import { searchArchived, type ArchivedMatch } from '../services/timesheets'
+import { searchArchived, fetchEntriesInRange, type ArchivedMatch } from '../services/timesheets'
 import { chatOverContext } from '../services/cloudflare-ai'
+import { parseDateRange } from '../lib/daterange'
 import { ExpandableText } from '../components/ExpandableText'
 
 const EXAMPLE_QUESTION = 'What did I work on last week?'
@@ -21,16 +22,31 @@ export function Ask() {
     setAnswer('')
     setSources([])
     try {
-      const { data, error } = await searchArchived(q, 10)
-      if (error) throw new Error(error.message)
-      const rows = (data as ArchivedMatch[]) ?? []
+      // A relative-date question is answered by reading that range, not by embedding it —
+      // "last week" is invisible to cosine similarity.
+      const period = parseDateRange(q)
+      let rows: ArchivedMatch[]
+      if (period) {
+        rows = await fetchEntriesInRange(period.from, period.to)
+      } else {
+        const { data, error } = await searchArchived(q, 10)
+        if (error) throw new Error(error.message)
+        rows = (data as ArchivedMatch[]) ?? []
+      }
       if (rows.length === 0) {
-        setError('No archived entries found. Index your archive first (Archived → "Index archive").')
+        setError(
+          period
+            ? `No entries between ${period.from} and ${period.to}.`
+            : 'No archived entries found. Index your archive first (Archived → "Index archive").',
+        )
         return
       }
-      const context = rows
-        .map((r) => `- [${new Date(r.date_memo).toLocaleDateString()}] ${r.description}${r.ai_summary ? ` (${r.ai_summary})` : ''}`)
-        .join('\n')
+      const context = [
+        `Today is ${new Date().toLocaleDateString()}.`,
+        ...rows.map(
+          (r) => `- [${new Date(r.date_memo).toLocaleDateString()}] ${r.description}${r.ai_summary ? ` (${r.ai_summary})` : ''}`,
+        ),
+      ].join('\n')
       setSources(rows)
       setAnswer(await chatOverContext(q, context))
     } catch (err) {

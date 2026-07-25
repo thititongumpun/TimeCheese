@@ -30,6 +30,33 @@ export async function fetchTimesheets(filters: TimesheetFilters) {
     .order('start_time', { ascending: true, nullsFirst: true })
 }
 
+// "Same as previous": text of the most recently *created* entry — not the latest work
+// date, so backfilling an old day doesn't change what this returns. Prefers the AI
+// summary over the raw description. Falls back to the archive when the live table is
+// empty, e.g. just after a period rollover.
+export async function fetchPreviousEntryText(): Promise<string | null> {
+  const userId = await getAuthenticatedUserId()
+
+  const { data: latest } = await supabase
+    .from('timesheets')
+    .select('description, ai_summary')
+    .eq('user_id', userId)
+    .order('inserted_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (latest) return latest.ai_summary?.trim() || latest.description
+
+  // Archived rows are ordered by work date — their inserted_at reflects archival, not entry.
+  const { data: archived } = await supabase
+    .from('archived_timesheets')
+    .select('description, ai_summary')
+    .eq('user_id', userId)
+    .order('date_memo', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return archived ? archived.ai_summary?.trim() || archived.description : null
+}
+
 // Same-day slots for overlap/8h validation, excluding the entry being edited.
 export async function fetchDaySlots(date: string, excludeId?: string) {
   const userId = await getAuthenticatedUserId()
@@ -43,19 +70,46 @@ export async function fetchDaySlots(date: string, excludeId?: string) {
   return query.order('start_time', { ascending: true })
 }
 
+// Exclusive upper bound for an inclusive 'YYYY-MM-DD' end date — covers the whole `to` day.
+function nextDay(to: string) {
+  const [y, m, d] = to.split('-').map(Number)
+  const end = new Date(y, m - 1, d + 1)
+  return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
+}
+
 // from/to are 'YYYY-MM-DD', both inclusive. Returns every archived row in range (no pagination).
 export async function fetchArchivedTimesheetsInRange(from: string, to: string) {
   const userId = await getAuthenticatedUserId()
-  const [y, m, d] = to.split('-').map(Number)
-  const end = new Date(y, m - 1, d + 1) // exclusive upper bound — covers the whole `to` day
-  const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
   return supabase
     .from('archived_timesheets')
     .select('*, projects(project_name, project_no)')
     .eq('user_id', userId)
     .gte('date_memo', from)
-    .lt('date_memo', endStr)
+    .lt('date_memo', nextDay(to))
     .order('date_memo', { ascending: true })
+}
+
+// Date-range retrieval for Ask: "last week" style questions get no useful signal from
+// cosine similarity, so they read rows directly. Spans both tables — the current period
+// is still live, everything before the last Sunday rollover sits in the archive.
+export async function fetchEntriesInRange(from: string, to: string): Promise<ArchivedMatch[]> {
+  const userId = await getAuthenticatedUserId()
+  const end = nextDay(to)
+  const range = (table: string) =>
+    supabase
+      .from(table)
+      .select('id, description, ai_summary, date_memo')
+      .eq('user_id', userId)
+      .gte('date_memo', from)
+      .lt('date_memo', end)
+
+  const [live, archived] = await Promise.all([range('timesheets'), range('archived_timesheets')])
+  if (live.error) throw new Error(live.error.message)
+  if (archived.error) throw new Error(archived.error.message)
+
+  return [...(live.data ?? []), ...(archived.data ?? [])]
+    .map((r) => ({ ...r, similarity: null }) as ArchivedMatch)
+    .sort((a, b) => b.date_memo.localeCompare(a.date_memo))
 }
 
 // Semantic search over archived rows: embed the query, return nearest neighbours.

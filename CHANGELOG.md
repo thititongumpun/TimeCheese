@@ -3,6 +3,33 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.15.0] - 2026-07-25
+
+### Added
+
+- **Choose which AI assistant handles Jira.** Settings has a "Jira agent"
+  dropdown: Claude Code, OpenAI Codex, or Auto. Auto picks whichever CLI is
+  installed (Claude first). The Jira Assistant page shows install instructions
+  for whichever one you picked, so a missing CLI tells you exactly what to
+  install. As before, nothing is stored — it runs the CLI already on your
+  machine, with no API key.
+- **"Same as previous".** A small button above the description box on a new
+  entry fills in the text of your most recently added entry (its AI summary if
+  it has one), so repeated days don't have to be retyped. It uses the entry you
+  added last, not the latest work date — backfilling an old day doesn't change
+  what it copies.
+
+### Fixed
+
+- **Ask understands dates.** "What did I work on last week?" answered "I don't
+  have information on your work from last week", because the search matched
+  entries by meaning and a phrase like "last week" means nothing to it — the
+  ten entries it found were from arbitrary dates. Questions containing a date
+  phrase ("last week", "yesterday", "this month", "past 7 days", …) now read
+  that date range directly instead of guessing. The answer also covers the
+  current week, which was previously invisible to Ask until the Sunday
+  rollover moved it into the archive.
+
 ## [4.14.0] - 2026-07-25
 
 ### Added

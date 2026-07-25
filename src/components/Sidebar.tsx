@@ -9,6 +9,7 @@ import { changePassword, signOut, updateProfile } from '../services/auth'
 import { currentUser } from '../store/auth'
 import { onlineUsers, updatePresence } from '../store/presence'
 import { applyTheme, getStoredTheme, THEMES, type ThemeMode } from '../lib/theme'
+import { AGENT_PROVIDERS, PROVIDER_LABELS, readStoredProvider, setAgentProvider, type AgentProvider } from '../lib/agent'
 import { formatReleaseDate, isVersionSkipped, skipVersion } from '../lib/update'
 
 // Lucide-style stroke icons, drawn with currentColor so they inherit the link's theme color.
@@ -54,6 +55,7 @@ export function Sidebar() {
   const { url } = useLocation()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [theme, setTheme] = useState<ThemeMode>(getStoredTheme)
+  const [provider, setProvider] = useState<AgentProvider>(readStoredProvider)
   const [version, setVersion] = useState(packageJson.version)
   const [update, setUpdate] = useState<Update | null>(null)
   const [updateStatus, setUpdateStatus] = useState('')
@@ -434,6 +436,29 @@ export function Sidebar() {
               >
                 {THEMES.map((t) => (
                   <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div class="divider" />
+
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-medium">Jira agent</div>
+                <div class="text-sm opacity-60">{PROVIDER_LABELS[provider]}</div>
+              </div>
+              <select
+                class="select select-sm w-36"
+                aria-label="Jira agent"
+                value={provider}
+                onChange={(event) => {
+                  const next = event.currentTarget.value as AgentProvider
+                  setProvider(next)
+                  setAgentProvider(next)
+                }}
+              >
+                {AGENT_PROVIDERS.map((p) => (
+                  <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>
                 ))}
               </select>
             </div>

@@ -11,11 +11,14 @@ vi.mock('../../lib/grammar', async (importOriginal) => ({
   checkGrammar: mockCheckGrammar,
 }))
 
+const { mockFetchPrevious } = vi.hoisted(() => ({ mockFetchPrevious: vi.fn() }))
+
 vi.mock('../../services/timesheets', () => ({
   createTimesheet: vi.fn(),
   updateTimesheet: vi.fn(),
   fetchDaySlots: vi.fn().mockResolvedValue({ data: [], error: null }),
   searchArchived: vi.fn().mockResolvedValue({ data: [] }),
+  fetchPreviousEntryText: mockFetchPrevious,
 }))
 
 beforeAll(() => {
@@ -63,5 +66,55 @@ describe('TimesheetModal grammar check', () => {
     fireEvent.input(textarea, { target: { value: 'Rewrote everything from scratch' } })
 
     await waitFor(() => expect(screen.queryByRole('button', { name: /did you mean/i })).toBeNull())
+  })
+})
+
+describe('TimesheetModal "Same as previous"', () => {
+  it('fills the description from the previous entry', async () => {
+    mockCheckGrammar.mockResolvedValue([])
+    mockFetchPrevious.mockResolvedValue('[IMP] Reviewed the deployment pipeline')
+
+    const { TimesheetModal } = await import('./TimesheetModal')
+    render(<TimesheetModal timesheet={null} projects={[]} onClose={vi.fn()} />)
+
+    const textarea = screen.getByLabelText(/description/i) as HTMLTextAreaElement
+    expect(textarea.value).toBe('')
+
+    fireEvent.click(screen.getByRole('button', { name: /same as previous/i }))
+
+    await waitFor(() => expect(textarea.value).toBe('[IMP] Reviewed the deployment pipeline'))
+  })
+
+  it('reports when there is nothing to copy', async () => {
+    mockCheckGrammar.mockResolvedValue([])
+    mockFetchPrevious.mockResolvedValue(null)
+
+    const { TimesheetModal } = await import('./TimesheetModal')
+    render(<TimesheetModal timesheet={null} projects={[]} onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /same as previous/i }))
+
+    await screen.findByText(/no previous entry to copy from/i)
+  })
+
+  it('is hidden when editing an existing entry', async () => {
+    mockCheckGrammar.mockResolvedValue([])
+
+    const { TimesheetModal } = await import('./TimesheetModal')
+    const existing = {
+      id: '1',
+      date_memo: '2026-07-25T00:00:00Z',
+      description: 'Existing work',
+      project_id: null,
+      is_complete: false,
+      ai_summary: null,
+      start_time: null,
+      end_time: null,
+    } as any
+    render(<TimesheetModal timesheet={existing} projects={[]} onClose={vi.fn()} />)
+
+    // Positive control: the modal really did render in edit mode.
+    expect(screen.getByRole('heading', { name: /edit entry/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /same as previous/i })).toBeNull()
   })
 })

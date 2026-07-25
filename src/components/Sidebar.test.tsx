@@ -69,6 +69,17 @@ describe('Sidebar', () => {
     expect(localStorage.getItem('timesh1t-theme')).toBe('retro')
   })
 
+  it('switches and persists the Jira agent', () => {
+    renderSidebar()
+    fireEvent.click(screen.getByRole('button', { name: /open user settings/i }))
+
+    const agentSelect = screen.getByRole('combobox', { name: /jira agent/i })
+    expect(agentSelect).toHaveValue('auto')
+    fireEvent.change(agentSelect, { target: { value: 'codex' } })
+
+    expect(localStorage.getItem('timecheese-agent-provider')).toBe('codex')
+  })
+
   it('auto-opens the update modal on launch', async () => {
     check.mockResolvedValue(fakeUpdate)
     renderSidebar()

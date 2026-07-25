@@ -25,6 +25,7 @@ import {
   deleteTimesheet,
   searchArchived,
   getOrCreateMonthlySummary,
+  fetchPreviousEntryText,
 } from './timesheets'
 import type { TimesheetFilters } from '../types'
 
@@ -38,6 +39,7 @@ function makeChain(result: any) {
     gte: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue(result),
     maybeSingle: vi.fn().mockResolvedValue(result),
     upsert: vi.fn().mockResolvedValue(result),
@@ -231,6 +233,40 @@ describe('timesheets service', () => {
     expect(chain.maybeSingle).not.toHaveBeenCalled()
     expect(mockSummarizeMonth).toHaveBeenCalled()
     expect(chain.upsert).toHaveBeenCalled()
+  })
+
+  it('fetchPreviousEntryText prefers the latest entry ai_summary', async () => {
+    const chain = makeChain({ data: { description: 'raw text', ai_summary: '[IMP] tidy text' }, error: null })
+    mockFrom.mockReturnValue(chain)
+
+    expect(await fetchPreviousEntryText()).toBe('[IMP] tidy text')
+    // Newest *created*, not newest work date — backfilling an old day must not change this.
+    expect(chain.order).toHaveBeenCalledWith('inserted_at', { ascending: false })
+    expect(mockFrom).toHaveBeenCalledWith('timesheets')
+    expect(mockFrom).toHaveBeenCalledTimes(1) // no archive lookup when a live row exists
+  })
+
+  it('fetchPreviousEntryText falls back to the description when there is no summary', async () => {
+    mockFrom.mockReturnValue(makeChain({ data: { description: 'raw text', ai_summary: '   ' }, error: null }))
+
+    expect(await fetchPreviousEntryText()).toBe('raw text')
+  })
+
+  it('fetchPreviousEntryText falls back to the archive when no live entries exist', async () => {
+    const live = makeChain({ data: null, error: null })
+    const archived = makeChain({ data: { description: 'old raw', ai_summary: 'old summary' }, error: null })
+    mockFrom.mockReturnValueOnce(live).mockReturnValueOnce(archived)
+
+    expect(await fetchPreviousEntryText()).toBe('old summary')
+    expect(mockFrom).toHaveBeenNthCalledWith(2, 'archived_timesheets')
+    // Archived rows carry no meaningful creation order, so they sort by work date.
+    expect(archived.order).toHaveBeenCalledWith('date_memo', { ascending: false })
+  })
+
+  it('fetchPreviousEntryText returns null when both tables are empty', async () => {
+    mockFrom.mockReturnValue(makeChain({ data: null, error: null }))
+
+    expect(await fetchPreviousEntryText()).toBeNull()
   })
 
   it('updateTimesheet applies update by id', async () => {
