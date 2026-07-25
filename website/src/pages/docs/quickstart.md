@@ -46,4 +46,9 @@ server to it:
 TimeCheese detects the CLI automatically — the Jira tab lights up once it's found. Pick which one
 to use under **Settings → Jira agent**; the default, Auto, uses whichever is installed.
 
+The Jira tab has its own **Model** dropdown: the CLI's own default, a preset, or `Custom…` for any
+model name you type. It's remembered per CLI. Codex publishes no model list, so its presets are
+empty — type the name under `Custom…`. After each run, a line under the answer shows the model,
+tokens, cost and rate-limit reset, as far as that CLI reports them.
+
 Ask needs no CLI — it answers from your own archived entries.
