@@ -306,6 +306,93 @@ fn codex_answer(line: &str) -> Option<String> {
     Some(item.get("text")?.as_str()?.to_string())
 }
 
+// Token/cost/rate-limit accounting surfaced next to the answer, so the UI can show what a
+// Jira Assistant call actually cost without the user digging through CLI output.
+#[derive(serde::Serialize, Default, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+struct AgentUsage {
+    model: Option<String>,
+    input_tokens: u64,
+    output_tokens: u64,
+    cost_usd: Option<f64>,
+    limit_window: Option<String>,
+    resets_at: Option<i64>,
+    limited: bool,
+}
+
+#[derive(serde::Serialize)]
+struct AgentReply {
+    answer: String,
+    usage: AgentUsage,
+}
+
+// Folds one stdout line into the running usage accumulator. A line that doesn't parse, or an
+// event type/shape neither CLI documents, is a silent no-op — showing no usage is fine;
+// showing wrong numbers is not.
+fn merge_usage(agent: Agent, line: &str, into: &mut AgentUsage) {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+        return;
+    };
+    let Some(kind) = v.get("type").and_then(|t| t.as_str()) else {
+        return;
+    };
+    match agent {
+        Agent::Claude => match kind {
+            "assistant" => {
+                if let Some(model) =
+                    v.get("message").and_then(|m| m.get("model")).and_then(|m| m.as_str())
+                {
+                    into.model = Some(model.to_string());
+                }
+            }
+            "rate_limit_event" => {
+                let Some(info) = v.get("rate_limit_info") else { return };
+                if let Some(t) = info.get("rateLimitType").and_then(|t| t.as_str()) {
+                    into.limit_window = Some(t.to_string());
+                }
+                if let Some(r) = info.get("resetsAt").and_then(|r| r.as_i64()) {
+                    into.resets_at = Some(r);
+                }
+                if let Some(status) = info.get("status").and_then(|s| s.as_str()) {
+                    into.limited = status != "allowed";
+                }
+            }
+            "result" => {
+                if let Some(cost) = v.get("total_cost_usd").and_then(|c| c.as_f64()) {
+                    into.cost_usd = Some(cost);
+                }
+                if let Some(usage) = v.get("usage") {
+                    let get = |k: &str| usage.get(k).and_then(|n| n.as_u64()).unwrap_or(0);
+                    // A fresh prompt, a cache write, and a cache read are three disjoint
+                    // buckets, not overlapping counts — summing them is correct, not
+                    // double-counting. Dropping the cache fields under-reports by ~99% on a
+                    // cache-heavy turn (see the captured sample in the tests below).
+                    into.input_tokens = get("input_tokens")
+                        + get("cache_creation_input_tokens")
+                        + get("cache_read_input_tokens");
+                    into.output_tokens = get("output_tokens");
+                }
+            }
+            _ => {}
+        },
+        Agent::Codex => {
+            if kind == "turn.completed" {
+                if let Some(usage) = v.get("usage") {
+                    if let Some(n) = usage.get("input_tokens").and_then(|n| n.as_u64()) {
+                        into.input_tokens = n;
+                    }
+                    if let Some(n) = usage.get("output_tokens").and_then(|n| n.as_u64()) {
+                        into.output_tokens = n;
+                    }
+                }
+                // cached_input_tokens is deliberately ignored — it's a SUBSET of
+                // input_tokens (11008 of 16162 in a captured sample), so adding it would
+                // double-count roughly two-thirds of the turn.
+            }
+        }
+    }
+}
+
 const JIRA_SYSTEM_PROMPT: &str =
     "You are a Jira assistant acting through the Atlassian MCP. Do whatever the \
      user asks — create issues, edit summary/description/fields, add comments, \
@@ -313,32 +400,70 @@ const JIRA_SYSTEM_PROMPT: &str =
      as needed. Do not touch any database; the timesheet is handled by the \
      T1meSh1t app.";
 
-// Fixed argv per agent. The prompt is deliberately NOT here — it goes on stdin, because a
-// multi-line argument is unrepresentable for a Windows .cmd shim: std refuses to escape it
-// ("batch file arguments are invalid"), and npm installs both CLIs as .cmd shims.
+// The model name comes straight off a user-typed text box in the UI and lands on argv, so
+// this is a trust boundary, not a formality. Two things must never reach the child process:
+// a newline (an unvalidated one would resurrect the Windows "batch file arguments are
+// invalid" failure fixed in v4.15.2 — the whole reason the prompt itself rides on stdin, see
+// cli_args below) and a leading `-` (that would be flag injection, letting the text box smuggle
+// an arbitrary CLI flag in ahead of the real arguments). Empty/whitespace input is not an
+// error — it means "no preference", so the CLI's own default model is used.
+fn validate_model(model: &str) -> Result<Option<String>, String> {
+    let m = model.trim();
+    if m.is_empty() {
+        return Ok(None);
+    }
+    let allowed = |c: char| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | ':' | '-');
+    if m.starts_with('-') || !m.chars().all(allowed) {
+        return Err(format!("invalid model name: {model:?}"));
+    }
+    Ok(Some(m.to_string()))
+}
+
+// Fixed argv per agent, plus an optional model override. The prompt is deliberately NOT here
+// — it goes on stdin, because a multi-line argument is unrepresentable for a Windows .cmd
+// shim: std refuses to escape it ("batch file arguments are invalid"), and npm installs both
+// CLIs as .cmd shims.
 // ponytail: bypassPermissions runs the Jira MCP tools without an interactive prompt
 // (impossible headless). Blast radius = this user's own Atlassian MCP. Upgrade path:
 // --allowedTools "mcp__atlassian__*" to forbid any other tool.
-fn cli_args(agent: Agent) -> Vec<&'static str> {
+fn cli_args(agent: Agent, model: Option<&str>) -> Vec<String> {
     match agent {
-        Agent::Claude => vec![
-            // stream-json (+ --verbose, required with -p) emits one JSON event per step so we
-            // can surface live progress instead of one opaque wait. With no positional prompt,
-            // -p takes its instructions from stdin.
-            "-p",
-            "--output-format",
-            "stream-json",
-            "--verbose",
-            "--permission-mode",
-            "bypassPermissions",
-            "--append-system-prompt",
-            JIRA_SYSTEM_PROMPT,
-        ],
-        // --skip-git-repo-check is mandatory: codex refuses to run outside a git repo and a
-        // packaged desktop app's cwd is not one. No sandbox flag — `codex exec` hardcodes
-        // approvals to Never and its read-only default is right for MCP-only work that writes
-        // no files. The trailing "-" means "read the prompt from stdin".
-        Agent::Codex => vec!["exec", "--json", "--skip-git-repo-check", "-"],
+        Agent::Claude => {
+            let mut args: Vec<String> = vec![
+                // stream-json (+ --verbose, required with -p) emits one JSON event per step so
+                // we can surface live progress instead of one opaque wait. With no positional
+                // prompt, -p takes its instructions from stdin.
+                "-p".into(),
+                "--output-format".into(),
+                "stream-json".into(),
+                "--verbose".into(),
+                "--permission-mode".into(),
+                "bypassPermissions".into(),
+                "--append-system-prompt".into(),
+                JIRA_SYSTEM_PROMPT.into(),
+            ];
+            if let Some(m) = model {
+                args.push("--model".into());
+                args.push(m.into());
+            }
+            args
+        }
+        Agent::Codex => {
+            // --skip-git-repo-check is mandatory: codex refuses to run outside a git repo and a
+            // packaged desktop app's cwd is not one. No sandbox flag — `codex exec` hardcodes
+            // approvals to Never and its read-only default is right for MCP-only work that
+            // writes no files. The trailing "-" means "read the prompt from stdin" and MUST
+            // stay the last element — inserting the model flag after it would silently break
+            // every Codex run.
+            let mut args: Vec<String> =
+                vec!["exec".into(), "--json".into(), "--skip-git-repo-check".into()];
+            if let Some(m) = model {
+                args.push("-m".into());
+                args.push(m.into());
+            }
+            args.push("-".into());
+            args
+        }
     }
 }
 
@@ -351,15 +476,17 @@ async fn ask_agent(
     app: tauri::AppHandle,
     prompt: String,
     provider: Provider,
-) -> Result<String, String> {
+    model: Option<String>,
+) -> Result<AgentReply, String> {
     tauri::async_runtime::spawn_blocking(move || {
+        let model = validate_model(model.as_deref().unwrap_or(""))?;
         let agent = pick(provider, installed(Agent::Claude), installed(Agent::Codex))
             .ok_or_else(|| "AGENT_NOT_INSTALLED".to_string())?;
 
         // Codex has no --append-system-prompt, so the system prompt rides in the prompt text.
         let codex_prompt = format!("{JIRA_SYSTEM_PROMPT}\n\n---\n\nTask: {prompt}");
         let mut cmd = cli_command(agent.bin());
-        cmd.args(cli_args(agent));
+        cmd.args(cli_args(agent, model.as_deref()));
         if agent == Agent::Codex {
             if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
                 cmd.current_dir(home);
@@ -403,6 +530,7 @@ async fn ask_agent(
             s
         });
         let mut result = String::new();
+        let mut usage = AgentUsage::default();
 
         for line in BufReader::new(stdout).lines() {
             let line = line.unwrap_or_default();
@@ -427,6 +555,7 @@ async fn ask_agent(
                     codex_progress_label(&line)
                 }
             };
+            merge_usage(agent, &line, &mut usage);
             if let Some(label) = label {
                 let _ = app.emit("agent-progress", label);
             }
@@ -440,7 +569,7 @@ async fn ask_agent(
             if agent == Agent::Codex && result.trim().is_empty() {
                 return Err("Codex returned no answer".to_string());
             }
-            Ok(result)
+            Ok(AgentReply { answer: result, usage })
         } else {
             // Codex's stderr is a full log — the useful message is the last line.
             let last = err.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("").trim();
@@ -1178,14 +1307,80 @@ mod tests {
     }
 
     // Windows refuses to spawn a .cmd shim with a multi-line argument, so nothing that can
-    // contain a newline may ever ride on argv — the prompt goes on stdin instead.
+    // contain a newline may ever ride on argv — the prompt goes on stdin instead. Covers both
+    // the fixed argv and a model flag, since the model string is user-typed.
     #[test]
     fn no_cli_argument_can_contain_a_newline() {
         for agent in [Agent::Claude, Agent::Codex] {
-            for arg in cli_args(agent) {
-                assert!(!arg.contains('\n') && !arg.contains('\r'), "{arg:?}");
+            for model in [None, Some("claude-fable-5")] {
+                for arg in cli_args(agent, model) {
+                    assert!(!arg.contains('\n') && !arg.contains('\r'), "{arg:?}");
+                }
             }
         }
+    }
+
+    // The trailing "-" is what makes codex read the prompt from stdin — it must stay the
+    // LAST element even once a model flag is inserted, or every Codex run breaks silently.
+    #[test]
+    fn cli_args_codex_keeps_trailing_dash_last_with_a_model() {
+        let args = cli_args(Agent::Codex, Some("gpt-5-codex"));
+        assert_eq!(args.last().map(String::as_str), Some("-"));
+        let dash_pos = args.len() - 1;
+        let m_pos = args.iter().position(|a| a == "-m").expect("-m present");
+        let model_pos = args.iter().position(|a| a == "gpt-5-codex").expect("model present");
+        assert!(m_pos < dash_pos && model_pos < dash_pos);
+    }
+
+    #[test]
+    fn cli_args_claude_includes_model_flag() {
+        let args = cli_args(Agent::Claude, Some("opus"));
+        assert!(args.iter().any(|a| a == "--model"));
+        assert!(args.iter().any(|a| a == "opus"));
+    }
+
+    // No model supplied must reproduce today's argv exactly — no flag emitted at all.
+    #[test]
+    fn cli_args_none_model_matches_prior_argv() {
+        assert_eq!(
+            cli_args(Agent::Claude, None),
+            vec![
+                "-p",
+                "--output-format",
+                "stream-json",
+                "--verbose",
+                "--permission-mode",
+                "bypassPermissions",
+                "--append-system-prompt",
+                JIRA_SYSTEM_PROMPT,
+            ]
+        );
+        assert_eq!(
+            cli_args(Agent::Codex, None),
+            vec!["exec", "--json", "--skip-git-repo-check", "-"]
+        );
+    }
+
+    #[test]
+    fn validate_model_rejects_dangerous_input() {
+        assert!(validate_model("bad model").is_err());
+        assert!(validate_model("-x").is_err());
+        assert!(validate_model("claude\nfable").is_err());
+    }
+
+    #[test]
+    fn validate_model_accepts_safe_names() {
+        assert_eq!(validate_model("claude-fable-5").unwrap(), Some("claude-fable-5".to_string()));
+        assert_eq!(validate_model("gpt-5-codex").unwrap(), Some("gpt-5-codex".to_string()));
+    }
+
+    // Empty/whitespace is not an error — it means "no preference", so no flag is emitted and
+    // the CLI falls back to its own default model.
+    #[test]
+    fn validate_model_empty_is_cli_default() {
+        assert_eq!(validate_model("").unwrap(), None);
+        assert_eq!(validate_model("   ").unwrap(), None);
+        assert!(!cli_args(Agent::Claude, None).iter().any(|a| a == "--model"));
     }
 
     // Spawning the vendored binary instead of the shim is what stops the console flashing,
@@ -1376,6 +1571,56 @@ mod tests {
         assert!(pick(Provider::Codex, true, false).is_none());
         assert!(matches!(pick(Provider::Codex, false, true), Some(Agent::Codex)));
         assert!(pick(Provider::Claude, false, true).is_none());
+    }
+
+    // Verbatim lines captured from real CLI runs.
+    const CLAUDE_ASSISTANT: &str =
+        r#"{"type":"assistant","message":{"model":"claude-opus-5","content":[]}}"#;
+    const CLAUDE_RATE_LIMIT: &str = r#"{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","resetsAt":1784999400,"rateLimitType":"five_hour","overageStatus":"rejected","isUsingOverage":false}}"#;
+    const CLAUDE_RESULT: &str = r#"{"type":"result","total_cost_usd":0.229911,"usage":{"input_tokens":2,"cache_creation_input_tokens":22216,"cache_read_input_tokens":15282,"output_tokens":4},"result":"pong"}"#;
+    const CODEX_TURN_COMPLETED: &str = r#"{"type":"turn.completed","usage":{"input_tokens":16162,"cached_input_tokens":11008,"cache_write_input_tokens":0,"output_tokens":5,"reasoning_output_tokens":0}}"#;
+
+    #[test]
+    fn merge_usage_folds_claude_events_summing_disjoint_token_buckets() {
+        let mut usage = AgentUsage::default();
+        for line in [CLAUDE_ASSISTANT, CLAUDE_RATE_LIMIT, CLAUDE_RESULT] {
+            merge_usage(Agent::Claude, line, &mut usage);
+        }
+        assert_eq!(
+            usage,
+            AgentUsage {
+                model: Some("claude-opus-5".to_string()),
+                input_tokens: 37500, // 2 + 22216 + 15282 — fresh + cache-write + cache-read
+                output_tokens: 4,
+                cost_usd: Some(0.229911),
+                limit_window: Some("five_hour".to_string()),
+                resets_at: Some(1784999400),
+                limited: false,
+            }
+        );
+    }
+
+    #[test]
+    fn merge_usage_codex_ignores_cached_input_tokens_subset() {
+        let mut usage = AgentUsage::default();
+        merge_usage(Agent::Codex, CODEX_TURN_COMPLETED, &mut usage);
+        assert_eq!(usage.input_tokens, 16162); // NOT +cached_input_tokens — that's a subset
+        assert_eq!(usage.output_tokens, 5);
+        assert_eq!(usage.model, None);
+    }
+
+    #[test]
+    fn merge_usage_ignores_unrelated_and_invalid_lines() {
+        let mut usage = AgentUsage::default();
+        for (agent, line) in [
+            (Agent::Claude, r#"{"type":"user"}"#),
+            (Agent::Claude, "not json"),
+            (Agent::Codex, r#"{"type":"user"}"#),
+            (Agent::Codex, "not json"),
+        ] {
+            merge_usage(agent, line, &mut usage);
+        }
+        assert_eq!(usage, AgentUsage::default());
     }
 }
 

@@ -3,6 +3,23 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.16.0] - 2026-07-25
+
+### Added
+
+- **The Jira tab shows what a run cost you.** After each request a line under the
+  answer reports the model that ran, tokens in and out, the price, and when your
+  rate-limit window resets — e.g. `claude-opus-5 · 37.5k in / 4 out · $0.23 ·
+  5h limit resets 21:30`. It shows only what the CLI actually reported, so Codex
+  (which publishes tokens and nothing else) shows tokens and nothing else. No
+  invented numbers, no empty placeholders.
+- **Pick the model from the Jira tab.** A Model dropdown above the prompt offers
+  the CLI's own default, the common presets, or `Custom…` for anything you type.
+  The choice is remembered per CLI across restarts — a Claude model can't leak
+  into a Codex run — and "mark done + close Jira" on the Home page uses it too.
+  Codex publishes no model list, so its presets are intentionally empty; type the
+  name under `Custom…`.
+
 ## [4.15.2] - 2026-07-25
 
 ### Fixed

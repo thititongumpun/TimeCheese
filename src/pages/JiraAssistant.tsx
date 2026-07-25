@@ -2,7 +2,17 @@ import { useEffect, useState } from 'preact/hooks'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { agentProvider, type AgentStatus } from '../lib/agent'
+import {
+  agentProvider,
+  MODEL_PRESETS,
+  modelFor,
+  setAgentModel,
+  formatTokens,
+  formatWindow,
+  type AgentStatus,
+  type AgentUsage,
+  type AgentReply,
+} from '../lib/agent'
 
 // Per-CLI setup instructions. Claude's --scope user makes the server global (visible from
 // any directory); without it the default `local` scope binds the MCP to one directory and
@@ -38,10 +48,14 @@ export function JiraAssistant() {
   const [status, setStatus] = useState<AgentStatus | null>(null)
   const [prompt, setPrompt] = useState('')
   const [output, setOutput] = useState('')
+  const [usage, setUsage] = useState<AgentUsage | null>(null)
   const [progress, setProgress] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // '' = CLI default, 'custom' = free-text box below, else a MODEL_PRESETS entry.
+  const [modelChoice, setModelChoice] = useState('')
+  const [customModel, setCustomModel] = useState('')
 
   async function checkStatus() {
     setStatus(null)
@@ -56,12 +70,29 @@ export function JiraAssistant() {
   // we're no longer using.
   useEffect(() => { checkStatus() }, [agentProvider.value])
 
+  // Re-derive the model picker from storage whenever the resolved CLI changes — a stored
+  // value outside the presets (or from the other provider) must open as Custom…, not silently
+  // fall back to Default.
+  useEffect(() => {
+    if (!status || status.provider === 'none') return
+    const provider = status.provider
+    const stored = modelFor(provider) ?? ''
+    if (stored && !MODEL_PRESETS[provider].includes(stored)) {
+      setModelChoice('custom')
+      setCustomModel(stored)
+    } else {
+      setModelChoice(stored)
+      setCustomModel('')
+    }
+  }, [status?.provider])
+
   async function execute(p: string) {
     const trimmed = p.trim()
     if (!trimmed) return
     setLoading(true)
     setError(null)
     setOutput('')
+    setUsage(null)
     setProgress([])
     const unlisten = await listen<string>('agent-progress', (ev) => {
       setProgress((cur) => [...cur, ev.payload])
@@ -69,7 +100,13 @@ export function JiraAssistant() {
     try {
       // Send the stored preference, not status.provider — Rust resolves 'auto' by the same
       // deterministic rule, and 'none' isn't a valid provider on that side.
-      setOutput(await invoke<string>('ask_agent', { prompt: trimmed, provider: agentProvider.value }))
+      const reply = await invoke<AgentReply>('ask_agent', {
+        prompt: trimmed,
+        provider: agentProvider.value,
+        model: modelFor(status?.provider ?? agentProvider.value),
+      })
+      setOutput(reply.answer)
+      setUsage(reply.usage)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       const label = status && status.provider !== 'none' ? SETUP[status.provider].label : 'An AI CLI'
@@ -88,6 +125,24 @@ export function JiraAssistant() {
   // Setup copy for the CLI that will actually run. null while checking, and when auto
   // found neither installed — those branches render their own content.
   const setup = status && status.provider !== 'none' ? SETUP[status.provider] : null
+
+  // The Rust side returns an all-zero AgentUsage when it couldn't parse anything from the
+  // CLI's output — treat that as "no usage line" rather than rendering an empty bar.
+  const usageLine = (() => {
+    if (!usage || !(usage.inputTokens > 0 || usage.outputTokens > 0)) return null
+    const selectedModel = modelChoice === 'custom' ? customModel : modelChoice
+    const parts = [
+      usage.model ?? (selectedModel || status?.provider),
+      `${formatTokens(usage.inputTokens)} in / ${formatTokens(usage.outputTokens)} out`,
+    ]
+    if (usage.costUsd != null) parts.push(`$${usage.costUsd.toFixed(2)}`)
+    if (usage.limitWindow && usage.resetsAt != null) {
+      const time = new Date(usage.resetsAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const windowLabel = usage.limited ? 'rate limited' : `${formatWindow(usage.limitWindow)} limit`
+      parts.push(`${windowLabel} resets ${time}`)
+    }
+    return parts.join(' · ')
+  })()
 
   async function copyCmd() {
     if (!setup) return
@@ -223,6 +278,44 @@ export function JiraAssistant() {
         <>
           <div class="badge badge-success gap-1 mb-4">✓ Jira connected via {setup?.label}</div>
 
+          <div class="mb-4 flex items-center gap-2">
+            <label for="agent-model" class="text-sm opacity-60 font-mono">Model</label>
+            <select
+              id="agent-model"
+              class="select select-sm w-44"
+              value={modelChoice}
+              onInput={(e) => {
+                const provider = status.provider as 'claude' | 'codex'
+                const v = e.currentTarget.value
+                setModelChoice(v)
+                if (v !== 'custom') setAgentModel(provider, v)
+                // Seed the custom box from what's actually in effect, so the UI
+                // can't show an empty box while a stored model still gets sent.
+                else setCustomModel(modelFor(provider) ?? '')
+              }}
+            >
+              <option value="">Default (CLI's own)</option>
+              {MODEL_PRESETS[status.provider as 'claude' | 'codex'].map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+              <option value="custom">Custom…</option>
+            </select>
+            {modelChoice === 'custom' && (
+              <input
+                type="text"
+                class="input input-sm w-48"
+                placeholder="model name"
+                value={customModel}
+                onInput={(e) => {
+                  const provider = status.provider as 'claude' | 'codex'
+                  const v = e.currentTarget.value
+                  setCustomModel(v)
+                  setAgentModel(provider, v)
+                }}
+              />
+            )}
+          </div>
+
           <form onSubmit={run} class="mb-4 flex flex-col gap-2">
             <textarea
               class="textarea w-full"
@@ -271,6 +364,8 @@ export function JiraAssistant() {
               {output}
             </pre>
           )}
+
+          {usageLine && <p class="mt-2 text-sm opacity-60 font-mono">{usageLine}</p>}
         </>
       )}
     </div>

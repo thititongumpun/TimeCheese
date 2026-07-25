@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { fetchTimesheets, fetchArchivedTimesheetsInRange, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
-import { agentProvider } from '../lib/agent'
+import { agentProvider, modelFor, type AgentReply } from '../lib/agent'
 import { fetchHolidays } from '../services/holidays'
 import { confirmDialog } from '../lib/confirm'
 import { tidySummary } from '../lib/summaryText'
@@ -251,11 +251,14 @@ export function Home() {
       setActionMessage(`Jira: ${ev.payload}`)
     })
     try {
-      const out = await invoke<string>('ask_agent', {
+      // 'auto' provider has no resolved model here (no agent_status probe like the Jira
+      // tab has) — modelFor returns undefined for it, so the CLI's own default applies.
+      const out = await invoke<AgentReply>('ask_agent', {
         prompt: `Find the Jira issue for this work and transition it to Done. Work: "${timesheet.description}"`,
         provider: agentProvider.value,
+        model: modelFor(agentProvider.value),
       })
-      setActionMessage(`Timesheet marked done. Jira: ${out.slice(0, 200) || 'done.'}`)
+      setActionMessage(`Timesheet marked done. Jira: ${out.answer.slice(0, 200) || 'done.'}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg === 'AGENT_NOT_INSTALLED'
