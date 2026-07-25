@@ -3,6 +3,20 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.15.1] - 2026-07-25
+
+### Fixed
+
+- **Codex is found on Windows.** The Jira tab said "Set up Codex first" on PCs
+  where `codex --version` works perfectly in a terminal. Windows installs Codex
+  as `codex.cmd`, and the app was only ever looking for `codex.exe` — it now
+  searches the same file types your shell does. Claude Code was never affected,
+  because its installer ships a real `.exe`.
+- **Codex and Claude are found however you installed them.** On macOS and Linux
+  the app knew where Homebrew, nvm and the system install put things, but not
+  volta, fnm, pnpm, bun, asdf or a custom npm folder — so a perfectly good
+  install could still show the setup card. All of those are now checked.
+
 ## [4.15.0] - 2026-07-25
 
 ### Added
