@@ -284,6 +284,35 @@ const JIRA_SYSTEM_PROMPT: &str =
      as needed. Do not touch any database; the timesheet is handled by the \
      T1meSh1t app.";
 
+// Fixed argv per agent. The prompt is deliberately NOT here — it goes on stdin, because a
+// multi-line argument is unrepresentable for a Windows .cmd shim: std refuses to escape it
+// ("batch file arguments are invalid"), and npm installs both CLIs as .cmd shims.
+// ponytail: bypassPermissions runs the Jira MCP tools without an interactive prompt
+// (impossible headless). Blast radius = this user's own Atlassian MCP. Upgrade path:
+// --allowedTools "mcp__atlassian__*" to forbid any other tool.
+fn cli_args(agent: Agent) -> Vec<&'static str> {
+    match agent {
+        Agent::Claude => vec![
+            // stream-json (+ --verbose, required with -p) emits one JSON event per step so we
+            // can surface live progress instead of one opaque wait. With no positional prompt,
+            // -p takes its instructions from stdin.
+            "-p",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--permission-mode",
+            "bypassPermissions",
+            "--append-system-prompt",
+            JIRA_SYSTEM_PROMPT,
+        ],
+        // --skip-git-repo-check is mandatory: codex refuses to run outside a git repo and a
+        // packaged desktop app's cwd is not one. No sandbox flag — `codex exec` hardcodes
+        // approvals to Never and its read-only default is right for MCP-only work that writes
+        // no files. The trailing "-" means "read the prompt from stdin".
+        Agent::Codex => vec!["exec", "--json", "--skip-git-repo-check", "-"],
+    }
+}
+
 // Run the user's agent CLI (Claude Code or Codex) headlessly and return its final text.
 // Streams step-by-step progress to the frontend via the "agent-progress" event. The
 // Atlassian (Jira) MCP is configured per-user inside the CLI, so no token lives here.
@@ -301,38 +330,15 @@ async fn ask_agent(
         // Codex has no --append-system-prompt, so the system prompt rides in the prompt text.
         let codex_prompt = format!("{JIRA_SYSTEM_PROMPT}\n\n---\n\nTask: {prompt}");
         let mut cmd = cli_command(agent.bin());
-        match agent {
-            // ponytail: bypassPermissions runs the Jira MCP tools without an interactive
-            // prompt (impossible in headless mode). Blast radius = this user's own Atlassian
-            // MCP. Upgrade path: --allowedTools "mcp__atlassian__*" to forbid any other tool.
-            Agent::Claude => {
-                cmd.args([
-                    "-p",
-                    &prompt,
-                    // stream-json (+ --verbose, required with -p) emits one JSON event per step
-                    // so we can surface live progress instead of one opaque wait.
-                    "--output-format",
-                    "stream-json",
-                    "--verbose",
-                    "--permission-mode",
-                    "bypassPermissions",
-                    "--append-system-prompt",
-                    JIRA_SYSTEM_PROMPT,
-                ]);
-            }
-            Agent::Codex => {
-                // --skip-git-repo-check is mandatory: codex refuses to run outside a git repo
-                // and a packaged desktop app's cwd is not one. No sandbox flag — `codex exec`
-                // hardcodes approvals to Never and its read-only default is right for
-                // MCP-only work that writes no files.
-                cmd.args(["exec", "--json", "--skip-git-repo-check", &codex_prompt]);
-                if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
-                    cmd.current_dir(home);
-                }
+        cmd.args(cli_args(agent));
+        if agent == Agent::Codex {
+            if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+                cmd.current_dir(home);
             }
         }
 
         let mut child = cmd
+            .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
@@ -343,6 +349,20 @@ async fn ask_agent(
                     format!("failed to run {} CLI: {e}", agent.name())
                 }
             })?;
+
+        // Feed the prompt in and close the pipe so the CLI stops waiting for more. Both read
+        // their instructions from stdin, which is what keeps the prompt off argv. Prompts are
+        // far below the pipe buffer, so a plain write can't deadlock against a child that
+        // hasn't started draining yet.
+        {
+            use std::io::Write;
+            let mut stdin = child.stdin.take().expect("stdin piped");
+            let text = match agent {
+                Agent::Claude => prompt,
+                Agent::Codex => codex_prompt,
+            };
+            stdin.write_all(text.as_bytes()).map_err(|e| format!("failed to send the prompt: {e}"))?;
+        }
 
         let stdout = child.stdout.take().expect("stdout piped");
         // Drain stderr concurrently: codex writes its whole progress log there, so reading
@@ -1127,6 +1147,17 @@ mod tests {
         }
         assert!(dirs.iter().any(|d| d.ends_with(".volta/bin")));
         assert!(dirs.iter().any(|d| d.ends_with("Library/pnpm")));
+    }
+
+    // Windows refuses to spawn a .cmd shim with a multi-line argument, so nothing that can
+    // contain a newline may ever ride on argv — the prompt goes on stdin instead.
+    #[test]
+    fn no_cli_argument_can_contain_a_newline() {
+        for agent in [Agent::Claude, Agent::Codex] {
+            for arg in cli_args(agent) {
+                assert!(!arg.contains('\n') && !arg.contains('\r'), "{arg:?}");
+            }
+        }
     }
 
     // The .cmd entry is the whole point: npm ships `codex.cmd`, never `codex.exe`.
