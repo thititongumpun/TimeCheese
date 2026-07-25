@@ -13,6 +13,7 @@ A desktop timesheet tracker built with Tauri 2.0, Preact, and Supabase. Log work
 ## Features
 
 - Timesheet entry with project assignment, per-entry working hours (start/end times, validated 09:00–18:00 / max 8h/day), and complete/incomplete status
+- Offline grammar check — spelling and grammar problems in the timesheet description appear as a clickable list while you type; click a suggestion to apply it. Powered by Harper compiled into the Rust binary — no API key, no config, no network, nothing typed leaves the machine. Runs before save, so the stored `description` is corrected too, not just the AI summary
 - Project management
 - Archived timesheets view with pagination
 - Holiday calendar — interactive `vanilla-calendar-pro` view plus a table; click a table row to jump the calendar to that holiday. Dates load from a public `holidays.json` on Cloudflare R2 (edit the file and re-upload, no rebuild)
