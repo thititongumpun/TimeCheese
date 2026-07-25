@@ -3,6 +3,35 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.13.0] - 2026-07-25
+
+### Added
+
+- **Offline grammar check on timesheet descriptions**: powered by
+  [Harper](https://github.com/Automattic/harper), compiled into the app. While
+  you type, problems appear as a clickable list under the description box; click
+  a suggestion to apply it. Runs entirely on-device — no key, no config, no
+  network — so it works offline and nothing typed leaves the machine. The check
+  runs *before* the description is saved, so the stored text gets fixed too, not
+  just the Cloudflare-generated summary.
+
+### Fixed
+
+- **Stale AI summary after editing a description**: editing an entry's
+  description left `ai_summary` generated from the old text, permanently.
+  Editing now regenerates it — but only when the description text actually
+  changed, so toggling Complete still costs a single query and never calls the
+  Worker. If Cloudflare is unreachable or unconfigured the edit still saves and
+  the previous summary is left intact.
+
+### Changed
+
+- **Smaller downloads**: added a `[profile.release]` section (LTO, symbol
+  stripping, single codegen unit) and dropped Harper's unused thesaurus feature.
+  The binary is smaller than 4.12.0's despite the new feature; the update
+  download grows by ~1.5 MB rather than the ~7.8 MB it would have. Release
+  builds take roughly two minutes longer as a result — `tauri dev` is unchanged.
+
 ## [4.12.0] - 2026-07-22
 
 ### Added

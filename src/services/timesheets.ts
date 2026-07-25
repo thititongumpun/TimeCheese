@@ -169,6 +169,25 @@ export async function createTimesheet(data: TimesheetInput) {
 }
 
 export async function updateTimesheet(id: string, data: Partial<TimesheetInput>) {
+  // Only a changed description invalidates ai_summary — an is_complete toggle must never
+  // hit the Worker. A missing/errored pre-read counts as changed; the catch below is safe.
+  if (data.description !== undefined) {
+    const { data: current } = await supabase
+      .from('timesheets')
+      .select('description')
+      .eq('id', id)
+      .single()
+
+    if (current?.description !== data.description) {
+      try {
+        const ai_summary = await summarizeDescription(data.description)
+        return supabase.from('timesheets').update({ ...data, ai_summary }).eq('id', id).select().single()
+      } catch {
+        // Worker down or unconfigured — still save the edit, leave the old summary alone.
+      }
+    }
+  }
+
   return supabase.from('timesheets').update(data).eq('id', id).select().single()
 }
 

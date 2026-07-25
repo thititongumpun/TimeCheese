@@ -77,6 +77,6 @@ Two tables in Supabase Postgres. Both have RLS: `auth.uid() = user_id`.
 
 `projects`: `id` (uuid PK), `user_id`, `project_no`, `project_name`, `is_active`, `inserted_at`
 
-`timesheets`: `id` (uuid PK), `user_id`, `date_memo` (timestamptz), `description`, `project_id` (FK → projects), `inserted_at`, `is_complete`, `ai_summary` (read-only, populated externally via Cloudflare — never written by this app), `start_time`/`end_time` (time, nullable — null on pre-v4.1.0 rows)
+`timesheets`: `id` (uuid PK), `user_id`, `date_memo` (timestamptz), `description`, `project_id` (FK → projects), `inserted_at`, `is_complete`, `ai_summary` (Cloudflare-generated: written by `createTimesheet` on insert, refreshed by `updateTimesheet` only when the description text changes — a Cloudflare failure during update is swallowed, leaving the previous value), `start_time`/`end_time` (time, nullable — null on pre-v4.1.0 rows)
 
 **Working-time validation** (`src/lib/timeslot.ts`, run by `TimesheetModal` on both create and edit): times within 09:00–18:00, no overlap with the same day's other entries, max 8 *worked* hours per day (12:00–13:00 lunch excluded from the count). This is app-level only — the DB CHECK constraint (`supabase/migrations/20260707_timeslot_columns.sql`) enforces just the window and start < end, so direct DB writes can create overlaps. Null-time rows are ignored by the check. There is no DB exclusion constraint by design (single-user app); add `btree_gist` + `EXCLUDE USING gist` if that ever changes.

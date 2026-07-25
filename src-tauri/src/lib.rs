@@ -44,6 +44,49 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+// One grammar problem, flattened for the frontend. `start`/`end` are char (code-point)
+// indices into the text that was sent, not UTF-16 offsets — see applyLint in src/lib/grammar.ts.
+#[derive(serde::Serialize)]
+struct GrammarLint {
+    start: usize,
+    end: usize,
+    message: String,
+    replacement: Option<String>, // None => delete the span
+}
+
+// Harper (github.com/Automattic/harper) runs entirely on-device, so this works offline
+// and nothing typed here leaves the machine.
+#[tauri::command]
+fn grammar_check(text: String) -> Vec<GrammarLint> {
+    use harper_core::linting::{LintGroup, Linter, Suggestion};
+    use harper_core::parsers::PlainEnglish;
+    use harper_core::spell::FstDictionary;
+    use harper_core::{Dialect, Document};
+
+    let doc = Document::new_curated(&text, &PlainEnglish);
+    // FstDictionary::curated() is memoized, so rebuilding the group per call is cheap.
+    let mut group = LintGroup::new_curated(FstDictionary::curated(), Dialect::American);
+    group
+        .lint(&doc)
+        .into_iter()
+        .filter_map(|lint| {
+            // Only surface lints the user can apply in one click.
+            let replacement = match lint.suggestions.first()? {
+                Suggestion::ReplaceWith(chars) => Some(chars.iter().collect()),
+                Suggestion::Remove => None,
+                // ponytail: InsertAfter lints dropped, add a third branch if users notice
+                Suggestion::InsertAfter(_) => return None,
+            };
+            Some(GrammarLint {
+                start: lint.span.start,
+                end: lint.span.end,
+                message: lint.message,
+                replacement,
+            })
+        })
+        .collect()
+}
+
 // Turn one stream-json line from `claude` into a short human progress label, or None.
 fn progress_label(line: &str) -> Option<String> {
     let v: serde_json::Value = serde_json::from_str(line).ok()?;
@@ -798,6 +841,29 @@ async fn open_park_window(
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::grammar_check;
+
+    #[test]
+    fn flags_a_typo_and_points_at_it() {
+        let text = "Fixed teh login bug.";
+        let lints = grammar_check(text.to_string());
+        let fix = lints
+            .iter()
+            .find(|l| l.replacement.as_deref() == Some("the"))
+            .expect("expected a 'teh' -> 'the' suggestion");
+        // Spans must line up with the offending word, or applyLint splices the wrong text.
+        let spanned: String = text.chars().take(fix.end).skip(fix.start).collect();
+        assert_eq!(spanned, "teh");
+    }
+
+    #[test]
+    fn leaves_clean_text_alone() {
+        assert!(grammar_check("Fixed the login bug.".to_string()).is_empty());
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -812,7 +878,7 @@ pub fn run() {
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, ask_claude, claude_status, open_appsmith_filler, open_park_window])
+        .invoke_handler(tauri::generate_handler![greet, ask_claude, claude_status, open_appsmith_filler, open_park_window, grammar_check])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

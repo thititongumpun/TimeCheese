@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, type ArchivedMatch } from '../../services/timesheets'
 import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
+import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
 import type { TimesheetWithProject, Project, TimesheetInput } from '../../types'
 
 interface Props {
@@ -30,6 +31,9 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<ArchivedMatch[]>([])
+  // Lints are kept with the exact text they were computed from — spans are offsets into
+  // that text, so applying one against newer text would splice the wrong characters.
+  const [linted, setLinted] = useState<{ text: string; lints: GrammarLint[] }>({ text: '', lints: [] })
 
   // Autofill (new entries only): debounce the description, surface similar past entries.
   useEffect(() => {
@@ -49,6 +53,15 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
     }, 400)
     return () => clearTimeout(timer)
   }, [description, timesheet])
+
+  // Grammar check (Harper, on-device via Rust). Runs when editing too, unlike the autofill above.
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const lints = await checkGrammar(description)
+      setLinted({ text: description, lints })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [description])
 
   async function handleSubmit(e: Event) {
     e.preventDefault()
@@ -179,6 +192,25 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
                       }}
                     >
                       <span class="line-clamp-1">{s.description}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {linted.text === description && linted.lints.length > 0 && (
+              <ul class="menu menu-sm bg-base-200 rounded-box mt-1 p-1">
+                <li class="menu-title text-xs">Grammar</li>
+                {linted.lints.map((lint, i) => (
+                  <li key={`${lint.start}-${lint.end}-${i}`}>
+                    <button
+                      type="button"
+                      class="text-left text-warning"
+                      onClick={() => setDescription(applyLint(description, lint))}
+                    >
+                      <span class="line-clamp-1">
+                        {lint.message}
+                        {lint.replacement !== null && ` → “${lint.replacement}”`}
+                      </span>
                     </button>
                   </li>
                 ))}

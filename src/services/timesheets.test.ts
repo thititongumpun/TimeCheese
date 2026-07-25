@@ -58,6 +58,7 @@ const emptyFilters: TimesheetFilters = {
 describe('timesheets service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFrom.mockReset() // clearAllMocks leaves mockReturnValueOnce queues behind
     mockSummarizeDescription.mockResolvedValue('AI-generated summary')
     mockEmbedText.mockResolvedValue([0.1, 0.2, 0.3])
     mockSummarizeMonth.mockResolvedValue('Monthly digest')
@@ -240,6 +241,47 @@ describe('timesheets service', () => {
 
     expect(chain.update).toHaveBeenCalledWith({ is_complete: true })
     expect(chain.eq).toHaveBeenCalledWith('id', '1')
+    expect(mockFrom).toHaveBeenCalledTimes(1)
+  })
+
+  it('updateTimesheet skips the worker when the description is unchanged', async () => {
+    // Two from() calls: the pre-read, then the write — distinct chains so their
+    // shared single() mocks resolve to different values.
+    const readChain = makeChain({ data: { description: 'Same text' }, error: null })
+    const writeChain = makeChain({ data: { id: '1' }, error: null })
+    mockFrom.mockReturnValueOnce(readChain).mockReturnValueOnce(writeChain)
+
+    await updateTimesheet('1', { description: 'Same text', is_complete: true })
+
+    expect(mockSummarizeDescription).not.toHaveBeenCalled()
+    expect(writeChain.update).toHaveBeenCalledWith({ description: 'Same text', is_complete: true })
+  })
+
+  it('updateTimesheet re-summarizes and writes ai_summary when the description changed', async () => {
+    const readChain = makeChain({ data: { description: 'Old text' }, error: null })
+    const writeChain = makeChain({ data: { id: '1' }, error: null })
+    mockFrom.mockReturnValueOnce(readChain).mockReturnValueOnce(writeChain)
+
+    await updateTimesheet('1', { description: 'New text' })
+
+    expect(mockSummarizeDescription).toHaveBeenCalledWith('New text')
+    expect(writeChain.update).toHaveBeenCalledWith({
+      description: 'New text',
+      ai_summary: 'AI-generated summary',
+    })
+  })
+
+  it('updateTimesheet still saves the edit without ai_summary when Cloudflare AI fails', async () => {
+    const readChain = makeChain({ data: { description: 'Old text' }, error: null })
+    const writeChain = makeChain({ data: { id: '1' }, error: null })
+    mockFrom.mockReturnValueOnce(readChain).mockReturnValueOnce(writeChain)
+    mockSummarizeDescription.mockRejectedValue(
+      new Error('Cloudflare AI endpoint is not configured.'),
+    )
+
+    await expect(updateTimesheet('1', { description: 'New text' })).resolves.toBeDefined()
+
+    expect(writeChain.update).toHaveBeenCalledWith({ description: 'New text' })
   })
 
   it('deleteTimesheet deletes by id', async () => {
