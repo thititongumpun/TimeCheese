@@ -426,9 +426,12 @@ fn mcp_state(agent: Agent) -> &'static str {
         },
         // `codex mcp list --json` prints a pretty-printed JSON array — parse the whole
         // buffer, not line by line.
-        // ponytail: the auth_status value set is unverified without codex installed, so the
-        // match is deliberately permissive — a wrong guess should surface as a runtime codex
-        // error, not an inescapable setup card. Tighten once confirmed.
+        // Field names verified against codex-cli 0.145.0: name / enabled / disabled_reason /
+        // auth_status are all real. A stdio server reports auth_status "unsupported", which
+        // must pass — it has no login to do.
+        // ponytail: the *unauthenticated* spelling for an HTTP server is still unobserved, so
+        // the match stays permissive — a wrong guess should surface as a runtime codex error,
+        // not an inescapable setup card. Tighten once seen.
         Agent::Codex => {
             let out = match cli_command("codex").args(["mcp", "list", "--json"]).output() {
                 Ok(o) => o.stdout,
