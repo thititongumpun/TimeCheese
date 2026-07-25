@@ -50,6 +50,30 @@ fn bin_candidates(bin: &str, pathext: &str) -> Vec<String> {
         .collect()
 }
 
+// The npm shim is `cmd.exe -> node.exe -> the real binary`, and CREATE_NO_WINDOW only
+// applies to the process we spawn — the grandchild flashes its own console on every call.
+// npm vendors that native binary next to the shim, so spawn it directly: one process, no
+// flash, and no node startup. The wrapper only adds a CODEX_MANAGED_BY_NPM hint used for
+// its "how to update" message, so nothing is lost by skipping it.
+// ponytail: hardcodes npm's layout (hoisted and nested both checked). If a future layout
+// moves, the .cmd shim below still runs — only the console flash comes back.
+#[cfg(any(windows, test))]
+fn vendored_native(shim: &std::path::Path, bin: &str) -> Option<std::path::PathBuf> {
+    let openai = shim.parent()?.join("node_modules").join("@openai");
+    let platform_pkg = format!("{bin}-win32-x64");
+    [
+        openai.join(&platform_pkg),
+        openai.join(bin).join("node_modules").join("@openai").join(&platform_pkg),
+    ]
+    .iter()
+    // vendor/<target-triple>/bin/<bin>.exe — the triple varies, so read the dir.
+    .filter_map(|root| std::fs::read_dir(root.join("vendor")).ok())
+    .flatten()
+    .flatten()
+    .map(|e| e.path().join("bin").join(format!("{bin}.exe")))
+    .find(|p| p.is_file())
+}
+
 // Walk PATH ourselves applying PATHEXT. Returns the bare name when nothing matches, so a
 // genuinely missing CLI still fails at spawn exactly as before. Spawning the resolved
 // `.cmd` is safe: std escapes batch-file arguments (Rust >= 1.77).
@@ -57,10 +81,15 @@ fn bin_candidates(bin: &str, pathext: &str) -> Vec<String> {
 fn resolve_bin(bin: &str) -> std::ffi::OsString {
     let pathext = std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".into());
     let candidates = bin_candidates(bin, &pathext);
-    std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+    match std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
         .flat_map(|dir| candidates.iter().map(move |c| dir.join(c)))
         .find(|p| p.is_file())
-        .map_or_else(|| bin.into(), std::path::PathBuf::into_os_string)
+    {
+        Some(shim) => vendored_native(&shim, bin)
+            .unwrap_or(shim)
+            .into_os_string(),
+        None => bin.into(),
+    }
 }
 
 // Build a command for one of the agent CLIs. On Windows, suppress the console window that
@@ -446,12 +475,11 @@ fn mcp_state(agent: Agent) -> &'static str {
         },
         // `codex mcp list --json` prints a pretty-printed JSON array — parse the whole
         // buffer, not line by line.
-        // Field names verified against codex-cli 0.145.0: name / enabled / disabled_reason /
-        // auth_status are all real. A stdio server reports auth_status "unsupported", which
-        // must pass — it has no login to do.
-        // ponytail: the *unauthenticated* spelling for an HTTP server is still unobserved, so
-        // the match stays permissive — a wrong guess should surface as a runtime codex error,
-        // not an inescapable setup card. Tighten once seen.
+        // Verified against codex-cli 0.145.0: a stdio server reports auth_status "unsupported"
+        // and an OAuth-authenticated HTTP server reports "o_auth" — both must pass.
+        // ponytail: "o_auth" names the auth *kind*, not its state, so this may not be able to
+        // tell logged-in from logged-out at all; the match stays permissive either way. Being
+        // wrong here surfaces as a runtime codex error, which beats an inescapable setup card.
         Agent::Codex => {
             let out = match cli_command("codex").args(["mcp", "list", "--json"]).output() {
                 Ok(o) => o.stdout,
@@ -1158,6 +1186,36 @@ mod tests {
                 assert!(!arg.contains('\n') && !arg.contains('\r'), "{arg:?}");
             }
         }
+    }
+
+    // Spawning the vendored binary instead of the shim is what stops the console flashing,
+    // so both npm layouts have to be found — and nothing invented when neither is there.
+    #[test]
+    fn vendored_native_finds_the_binary_behind_the_npm_shim() {
+        let root = std::env::temp_dir().join("tc-vendored-test");
+        let _ = std::fs::remove_dir_all(&root);
+        let shim = root.join("codex.cmd");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(&shim, "@ECHO off").unwrap();
+
+        assert_eq!(vendored_native(&shim, "codex"), None, "invented a path");
+
+        // Nested layout, as npm 10 installs it.
+        let bin = root
+            .join("node_modules/@openai/codex/node_modules/@openai/codex-win32-x64")
+            .join("vendor/x86_64-pc-windows-msvc/bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::write(bin.join("codex.exe"), "MZ").unwrap();
+        assert_eq!(vendored_native(&shim, "codex"), Some(bin.join("codex.exe")));
+
+        // Hoisted layout wins too — a different target triple must still resolve.
+        let hoisted = root
+            .join("node_modules/@openai/codex-win32-x64/vendor/aarch64-pc-windows-msvc/bin");
+        std::fs::create_dir_all(&hoisted).unwrap();
+        std::fs::write(hoisted.join("codex.exe"), "MZ").unwrap();
+        assert_eq!(vendored_native(&shim, "codex"), Some(hoisted.join("codex.exe")));
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     // The .cmd entry is the whole point: npm ships `codex.cmd`, never `codex.exe`.
