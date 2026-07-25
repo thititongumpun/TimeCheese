@@ -9,6 +9,7 @@ import { changePassword, signOut, updateProfile } from '../services/auth'
 import { currentUser } from '../store/auth'
 import { onlineUsers, updatePresence } from '../store/presence'
 import { applyTheme, getStoredTheme, THEMES, type ThemeMode } from '../lib/theme'
+import { formatReleaseDate, isVersionSkipped, skipVersion } from '../lib/update'
 
 // Lucide-style stroke icons, drawn with currentColor so they inherit the link's theme color.
 const ICONS: Record<string, string[]> = {
@@ -89,8 +90,12 @@ export function Sidebar() {
 
   // Auto-check for an update once on app open. Silent: only surfaces the banner if one
   // exists. ponytail: no status/spinner noise on startup — fails quietly (e.g. no network).
+  // The modal only auto-opens for versions the user hasn't skipped; the sidebar button still shows.
   useEffect(() => {
-    check().then(setUpdate).catch(() => {})
+    check().then((u) => {
+      setUpdate(u)
+      if (u && !isVersionSkipped(u.version)) setUpdateModalOpen(true)
+    }).catch(() => {})
   }, [])
 
   // Signature: a live clock — this is a timesheet app, so the current time is the identity.
@@ -183,6 +188,9 @@ export function Sidebar() {
       setInstallingUpdate(false)
     }
   }
+
+  // '' when the update has no date or an unparseable one — the ` · ` separator drops with it.
+  const releaseDate = formatReleaseDate(update?.date)
 
   return (
     // translate-none + will-change-auto undo daisyUI's drawer slide transform: with a
@@ -518,7 +526,7 @@ export function Sidebar() {
 
             <div class="mt-2 text-sm opacity-70">
               Version {update.version}
-              {update.date && ` · ${update.date.split(' ')[0]}`}
+              {releaseDate && ` · ${releaseDate}`}
             </div>
 
             <div class="divider my-3" />
@@ -541,6 +549,17 @@ export function Sidebar() {
             >
               {installingUpdate && <span class="loading loading-spinner loading-xs" />}
               Download and install {update.version}
+            </button>
+
+            <button
+              class="btn btn-ghost btn-sm mt-2 w-full"
+              aria-label={`Skip version ${update.version}`}
+              onClick={() => {
+                skipVersion(update.version)
+                setUpdateModalOpen(false)
+              }}
+            >
+              Skip this version
             </button>
           </div>
           <button
