@@ -23,10 +23,38 @@ fn augmented_path() -> std::ffi::OsString {
     std::env::join_paths(paths).unwrap_or(existing)
 }
 
+// Filenames CreateProcess would have to try for `bin` in one directory. CreateProcess only
+// ever appends ".exe" itself — it ignores PATHEXT, which is what the shell uses — so an
+// npm-installed CLI that ships only a `codex.cmd` shim is invisible to Command::new("codex").
+#[cfg(any(windows, test))]
+fn bin_candidates(bin: &str, pathext: &str) -> Vec<String> {
+    pathext
+        .split(';')
+        .map(str::trim)
+        .filter(|e| !e.is_empty())
+        .map(|e| format!("{bin}{}", e.to_lowercase()))
+        .collect()
+}
+
+// Walk PATH ourselves applying PATHEXT. Returns the bare name when nothing matches, so a
+// genuinely missing CLI still fails at spawn exactly as before. Spawning the resolved
+// `.cmd` is safe: std escapes batch-file arguments (Rust >= 1.77).
+#[cfg(windows)]
+fn resolve_bin(bin: &str) -> std::ffi::OsString {
+    let pathext = std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".into());
+    let candidates = bin_candidates(bin, &pathext);
+    std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+        .flat_map(|dir| candidates.iter().map(move |c| dir.join(c)))
+        .find(|p| p.is_file())
+        .map_or_else(|| bin.into(), std::path::PathBuf::into_os_string)
+}
+
 // Build a command for one of the agent CLIs. On Windows, suppress the console window that
 // would otherwise flash on every spawn (CREATE_NO_WINDOW).
 fn cli_command(bin: &str) -> std::process::Command {
-    #[allow(unused_mut)]
+    #[cfg(windows)]
+    let mut cmd = std::process::Command::new(resolve_bin(bin));
+    #[cfg(not(windows))]
     let mut cmd = std::process::Command::new(bin);
     #[cfg(not(windows))]
     cmd.env("PATH", augmented_path());
@@ -1069,6 +1097,20 @@ async fn open_park_window(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // The .cmd entry is the whole point: npm ships `codex.cmd`, never `codex.exe`.
+    #[test]
+    fn bin_candidates_cover_every_pathext_entry() {
+        assert_eq!(
+            bin_candidates("codex", ".COM;.EXE;.BAT;.CMD"),
+            ["codex.com", "codex.exe", "codex.bat", "codex.cmd"],
+        );
+    }
+
+    #[test]
+    fn bin_candidates_ignore_empty_pathext_segments() {
+        assert_eq!(bin_candidates("claude", ".EXE;;"), ["claude.exe"]);
+    }
 
     #[test]
     fn flags_a_typo_and_points_at_it() {
