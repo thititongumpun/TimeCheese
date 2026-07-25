@@ -8,13 +8,27 @@ use tauri::{Emitter, Manager};
 fn augmented_path() -> std::ffi::OsString {
     use std::path::PathBuf;
     let home = std::env::var("HOME").unwrap_or_default();
+    let home = PathBuf::from(&home);
+    // Node version managers and alternative package managers each park their global bins
+    // somewhere different, and none of them are on a GUI app's PATH.
+    // ponytail: a fixed list — it can't know a truly custom `npm prefix`. Upgrade path is
+    // asking the login shell (`$SHELL -lic 'printf %s "$PATH"'`), which costs a subprocess
+    // and can hang on a slow rc file; do that only if this list starts missing people.
     let mut dirs: Vec<PathBuf> = vec![
         "/usr/local/bin".into(),
         "/opt/homebrew/bin".into(),
-        PathBuf::from(&home).join(".local/bin"),
+        home.join(".local/bin"),
+        home.join(".npm-global/bin"),
+        home.join(".volta/bin"),
+        home.join(".bun/bin"),
+        home.join(".asdf/shims"),
+        home.join("Library/pnpm"),                                        // pnpm, macOS
+        home.join(".local/share/pnpm"),                                   // pnpm, Linux
+        home.join("Library/Application Support/fnm/aliases/default/bin"), // fnm, macOS
+        home.join(".local/share/fnm/aliases/default/bin"),                // fnm, Linux
     ];
     // nvm: ~/.nvm/versions/node/<version>/bin — add every installed version's bin.
-    if let Ok(entries) = std::fs::read_dir(PathBuf::from(&home).join(".nvm/versions/node")) {
+    if let Ok(entries) = std::fs::read_dir(home.join(".nvm/versions/node")) {
         dirs.extend(entries.flatten().map(|e| e.path().join("bin")));
     }
     let existing = std::env::var_os("PATH").unwrap_or_default();
@@ -1097,6 +1111,20 @@ async fn open_park_window(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Nothing may be *dropped* from PATH — a GUI app inherits little, but a terminal-launched
+    // one inherits everything, and that's where the CLI usually already is.
+    #[cfg(not(windows))]
+    #[test]
+    fn augmented_path_keeps_the_inherited_path_and_adds_version_managers() {
+        let joined = augmented_path();
+        let dirs: Vec<_> = std::env::split_paths(&joined).collect();
+        for inherited in std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()) {
+            assert!(dirs.contains(&inherited), "dropped {inherited:?}");
+        }
+        assert!(dirs.iter().any(|d| d.ends_with(".volta/bin")));
+        assert!(dirs.iter().any(|d| d.ends_with("Library/pnpm")));
+    }
 
     // The .cmd entry is the whole point: npm ships `codex.cmd`, never `codex.exe`.
     #[test]
