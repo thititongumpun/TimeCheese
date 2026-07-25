@@ -40,6 +40,8 @@ describe('TimesheetModal grammar check', () => {
     fireEvent.input(textarea, { target: { value: 'Fixed teh login bug' } })
 
     const fix = await screen.findByRole('button', { name: /did you mean/i }, { timeout: 2000 })
+    // The replacement rides in a badge-warning chip, not bare `text-warning` text (2.14:1 contrast).
+    expect(fix.querySelector('.badge-warning')?.textContent).toBe('the')
     fireEvent.click(fix)
 
     await waitFor(() => expect(textarea.value).toBe('Fixed the login bug'))

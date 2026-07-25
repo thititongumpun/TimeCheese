@@ -204,13 +204,13 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
                   <li key={`${lint.start}-${lint.end}-${i}`}>
                     <button
                       type="button"
-                      class="text-left text-warning"
+                      class="text-left"
                       onClick={() => setDescription(applyLint(description, lint))}
                     >
-                      <span class="line-clamp-1">
-                        {lint.message}
-                        {lint.replacement !== null && ` → “${lint.replacement}”`}
-                      </span>
+                      <span class="line-clamp-1">{lint.message}</span>
+                      {lint.replacement !== null && (
+                        <span class="badge badge-warning badge-sm">{lint.replacement}</span>
+                      )}
                     </button>
                   </li>
                 ))}
