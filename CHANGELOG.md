@@ -3,6 +3,30 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.14.0] - 2026-07-25
+
+### Added
+
+- **The update prompt now opens by itself.** A new version used to appear only
+  as a small sidebar tab you had to notice and click, so releases were easy to
+  miss. The "Update available" window now opens when you start the app.
+- **Skip a version.** A "Skip this version" button sits under Download and
+  install. Skipping is remembered after you close and reopen the app, and it
+  only silences the popup — the sidebar button stays, so you can still install
+  whenever you like. A newer release prompts you again as normal.
+
+### Fixed
+
+- **The release date is readable.** It rendered as a raw timestamp
+  (`2026-07-25T06:56:56.126Z`); it now shows as a plain date. A missing or
+  malformed date is hidden rather than shown as "Invalid Date".
+- **Grammar suggestions are readable on light themes.** The suggested word used
+  a yellow that measured 2.14:1 against the light background — well under the
+  4.5:1 accessibility minimum. It now appears as a badge, which lifts the light
+  theme to 8.01:1. Checked against all 11 bundled themes; only `retro` still
+  falls short (3.28:1, up from 2.87:1), and that comes from DaisyUI's own
+  palette.
+
 ## [4.13.0] - 2026-07-25
 
 ### Added
