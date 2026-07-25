@@ -30,7 +30,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const specRows = [
   {
     name: 'Timesheet tracking',
-    desc: 'Log entries per project with start/end times, validated against the 09:00–18:00 working window, max 8 worked hours a day (lunch 12:00–13:00 excluded).',
+    desc: 'Log entries per project with start/end times, validated against the 09:00–18:00 working window, max 8 worked hours a day (lunch 12:00–13:00 excluded). “Same as previous” refills the description from your last entry.',
     free: true,
     pro: true,
   },
@@ -90,13 +90,13 @@ const specRows = [
   },
   {
     name: 'Jira Assistant',
-    desc: 'Transition Jira issues, “mark done + close Jira” straight from a timesheet row.',
+    desc: 'Transition Jira issues, “mark done + close Jira” straight from a timesheet row. Runs on whichever CLI you already have — Claude Code or OpenAI Codex — picked in Settings, or auto-detected.',
     free: false,
     pro: true,
   },
   {
-    name: 'Ask Claude',
-    desc: 'Free-form prompts to Claude from inside the app.',
+    name: 'Ask',
+    desc: 'Ask questions about your own past work and get an answer with the entries it came from. Date questions like “what did I work on last week?” read that week directly; topical ones search by meaning.',
     free: false,
     pro: true,
   },
@@ -306,8 +306,9 @@ const specRows = [
         <span class="text-[var(--color-accent)]">◆</span> Everything in the box.
       </h2>
       <p class="mt-2 text-[var(--color-muted)] max-w-2xl">
-        All of it free once your admin approves you. The two Pro rows aren’t a paid tier — they ride
-        your own Claude Code subscription and the Atlassian MCP server.
+        All of it free once your admin approves you. The two Pro rows aren’t a paid tier — the Jira
+        Assistant rides an AI CLI you already have (Claude Code or OpenAI Codex) plus the Atlassian
+        MCP server.
       </p>
 
       <div class="mt-8 overflow-x-auto">
@@ -334,7 +335,7 @@ const specRows = [
         </table>
       </div>
       <p class="text-xs text-[var(--color-muted)] mt-3">
-        Pro rows require a locally installed Claude Code CLI (your own subscription) plus the Atlassian MCP server.
+        The Jira Assistant requires a locally installed Claude Code or OpenAI Codex CLI (your own subscription) plus the Atlassian MCP server.
       </p>
     </div>
   </section>

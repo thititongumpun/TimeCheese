@@ -32,11 +32,18 @@ against a few rules:
 - A day is capped at **8 worked hours** — the 12:00–13:00 lunch hour doesn't count toward the
   total.
 
-## 4. Optional — enable Pro (Jira Assistant + Ask Claude)
+## 4. Optional — enable Pro (Jira Assistant + Ask)
 
-Pro features need a locally installed [Claude Code](https://claude.com/claude-code) CLI (your own
-subscription) plus the Atlassian MCP server. Install Claude Code, then add the MCP server:
+The Jira Assistant runs an AI CLI that's already installed on your machine, on your own
+subscription — either [Claude Code](https://claude.com/claude-code) or
+[OpenAI Codex](https://developers.openai.com/codex/cli). Install one, then add the Atlassian MCP
+server to it:
 
 <div class="terminal text-xs sm:text-sm"><span class="prompt">$</span>claude mcp add --scope user --transport http atlassian https://mcp.atlassian.com/v1/mcp/authv2</div>
 
-TimeCheese detects the CLI automatically — the Jira tab lights up once it's found.
+<div class="terminal text-xs sm:text-sm"><span class="prompt">$</span>codex mcp add atlassian --url https://mcp.atlassian.com/v1/mcp/authv2</div>
+
+TimeCheese detects the CLI automatically — the Jira tab lights up once it's found. Pick which one
+to use under **Settings → Jira agent**; the default, Auto, uses whichever is installed.
+
+Ask needs no CLI — it answers from your own archived entries.
