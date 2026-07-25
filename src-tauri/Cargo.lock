@@ -7031,7 +7031,7 @@ dependencies = [
 
 [[package]]
 name = "timesh1t"
-version = "4.15.1"
+version = "4.15.2"
 dependencies = [
  "harper-core",
  "serde",

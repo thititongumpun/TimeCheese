@@ -3,6 +3,17 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.15.2] - 2026-07-25
+
+### Fixed
+
+- **Jira runs work on Windows.** After the CLI was finally detected, every Jira
+  request failed with "batch file arguments are invalid". Windows can't accept a
+  multi-line instruction as a command-line argument, and the request always
+  contains line breaks. The instructions are now handed to the CLI a different
+  way, which Windows has no limit on. This also removes the same trap for Claude
+  Code, which would have failed on any prompt you typed across two lines.
+
 ## [4.15.1] - 2026-07-25
 
 ### Fixed
