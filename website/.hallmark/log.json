@@ -1,5 +1,17 @@
 [
   {
+    "date": "2026-07-27",
+    "scope": "app",
+    "macrostructure": "Narrative Workflow (index) / Long Document (content)",
+    "theme": "custom \"Blueprint\"",
+    "theme_axes": "light / high-contrast-serif / cool",
+    "vibe": "precision instrument, engineering journal",
+    "nav": "N12 banner+retract",
+    "footer": "Ft4 dense colophon",
+    "enrichment": "Tier-A CSS art (day timeline) + real screenshots",
+    "brief": "Whole-site fresh art direction + GSAP 3.15 restrained motion"
+  },
+  {
     "date": "2026-07-16",
     "scope": "app",
     "macrostructure": "Marquee Hero (index) / Long Document (content)",

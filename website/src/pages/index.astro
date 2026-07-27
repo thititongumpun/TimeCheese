@@ -1,29 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
+import { getRelease } from '../lib/release';
 
-const RELEASES_URL = 'https://github.com/thititongumpun/TimeCheese/releases/latest';
-
-let version = 'latest';
-let msiUrl = RELEASES_URL;
-let exeUrl = RELEASES_URL;
-let dmgUrl = RELEASES_URL;
-
-try {
-  const res = await fetch('https://api.github.com/repos/thititongumpun/TimeCheese/releases/latest');
-  if (res.ok) {
-    const release = await res.json();
-    version = release.tag_name ?? version;
-    const assets: Array<{ name: string; browser_download_url: string }> = release.assets ?? [];
-    const msi = assets.find((a) => a.name.endsWith('.msi'));
-    const exe = assets.find((a) => a.name.endsWith('-setup.exe') || a.name.endsWith('.exe'));
-    const dmg = assets.find((a) => a.name.endsWith('.dmg'));
-    if (msi) msiUrl = msi.browser_download_url;
-    if (exe) exeUrl = exe.browser_download_url;
-    if (dmg) dmgUrl = dmg.browser_download_url;
-  }
-} catch {
-  // offline / rate-limited — fall back to the releases page for every link
-}
+const { version, msiUrl, exeUrl, dmgUrl, releasesUrl } = await getRelease();
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -104,310 +83,300 @@ const specRows = [
 ---
 
 <Base title="TimeCheese — desktop timesheet tracker">
-  <!-- Hero (Marquee) -->
+  <!-- Hero -->
   <section class="max-w-5xl mx-auto px-6 pt-16 pb-4">
-    <h1 class="font-display font-extrabold uppercase tracking-[-0.01em] leading-[1.02] text-[clamp(2.75rem,10vw,7.5rem)]">
-      Time<span class="text-[var(--color-accent)]">Cheese</span>
+    <h1 data-hero data-hero-item class="font-display text-display leading-[1.05] tracking-[-0.02em]">
+      Log the day. File it once.
     </h1>
-    <p class="mt-5 text-lg text-[var(--color-muted)] max-w-xl">
-      A desktop timesheet tracker. Log entries against projects, mark them complete, and never
-      miss the monthly cutoff.
+    <p data-hero-item class="mt-5 text-lg text-muted max-w-xl">
+      A desktop timesheet tracker that validates your hours and files them into Msync and Park
+      for you.
     </p>
-    <div class="mt-8 flex flex-wrap gap-4">
+    <div data-hero-item class="mt-8 flex flex-wrap gap-4">
       <a
         href={msiUrl}
-        class="inline-flex items-center justify-center whitespace-nowrap bg-[var(--color-accent)] px-5 py-3 text-sm font-bold uppercase text-[var(--color-on-accent)] shadow-[4px_4px_0_0_var(--color-border)] hover:bg-[var(--color-accent-deep)] transition-colors"
+        class="inline-flex items-center min-h-11 whitespace-nowrap rounded-sm bg-accent px-4 py-2 text-sm font-medium text-on-accent border border-accent-deep hover:bg-accent-deep transition-colors"
       >
         Download for Windows
       </a>
       <a
         href={dmgUrl}
-        class="inline-flex items-center justify-center whitespace-nowrap border-2 border-[var(--color-border)] px-5 py-3 text-sm font-bold uppercase hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
+        class="inline-flex items-center min-h-11 whitespace-nowrap rounded-sm px-4 py-2 text-sm font-medium border border-rule hover:border-accent hover:text-accent transition-colors"
       >
         Download for macOS
       </a>
     </div>
-    <p class="mt-4 text-xs font-mono text-[var(--color-muted)]">
-      v{version} · Free once your admin approves you · Auto-updates built in
+    <p data-hero-item class="mt-4 font-mono text-xs text-muted">
+      v{version} · free once your admin approves you · auto-updates built in
     </p>
-    <p class="mt-10 text-xs font-mono text-[var(--color-muted)]">v{version} · home</p>
-    <a href={`${base}/home.png`} target="_blank" rel="noopener" class="shot block cursor-zoom-in mt-2 border-2 border-[var(--color-border)] shadow-[4px_4px_0_0_var(--color-border)]">
-      <img
-        src={`${base}/home.png`}
-        alt="TimeCheese Home screen showing the timesheet entries table"
-        width="1843"
-        height="832"
-        loading="eager"
-        decoding="async"
-        class="w-full h-auto"
-      />
-    </a>
+    <figure data-hero-item data-parallax class="shot-frame mt-10 p-2">
+      <a class="shot block cursor-zoom-in" href={`${base}/home.png`} target="_blank" rel="noopener">
+        <img
+          src={`${base}/home.png`}
+          alt="TimeCheese Home screen showing the timesheet entries table"
+          width="1843"
+          height="832"
+          loading="eager"
+          decoding="async"
+          class="w-full h-auto"
+        />
+      </a>
+      <figcaption class="mt-2 px-2 pb-2 font-mono text-xs text-muted">v{version} · home · click to zoom</figcaption>
+    </figure>
   </section>
 
-  <!-- Marquee strip -->
-  <div class="marquee mt-12 border-y-2 border-[var(--color-border)] bg-[var(--color-accent)] text-[var(--color-on-accent)]" role="img" aria-label="LOG ONCE — MSYNC AUTO-FILL — PARK AUTO-FILL — 09:00–18:00 VALIDATED — NEVER MISS THE CUTOFF">
-    <div class="marquee-track py-2.5 text-sm font-bold uppercase tracking-[0.04em]" aria-hidden="true">
-      <span class="shrink-0 whitespace-nowrap">LOG ONCE ✱ MSYNC AUTO-FILL ✱ PARK AUTO-FILL ✱ 09:00–18:00 VALIDATED ✱ NEVER MISS THE CUTOFF ✱&nbsp;</span>
-      <span class="shrink-0 whitespace-nowrap">LOG ONCE ✱ MSYNC AUTO-FILL ✱ PARK AUTO-FILL ✱ 09:00–18:00 VALIDATED ✱ NEVER MISS THE CUTOFF ✱&nbsp;</span>
-    </div>
+  <!-- Fact strip -->
+  <div class="border-y border-rule">
+    <p class="max-w-5xl mx-auto px-6 py-3 font-mono text-xs text-muted">
+      Windows · macOS · auto-updates · free once approved
+    </p>
   </div>
 
-  <!-- Day-timeline band -->
-  <section class="max-w-5xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
-    <div>
-      <h2 class="font-display font-extrabold uppercase tracking-[-0.01em] leading-[1.02] text-3xl">
-        <span class="text-[var(--color-accent)]">◆</span> Your day, one bar.
-      </h2>
-      <p class="mt-3 text-[var(--color-muted)]">
-        Entries validate against the 09:00–18:00 window — max 8 worked hours, lunch never counted.
-      </p>
-    </div>
+  <!-- 1.0 LOG -->
+  <section data-stage data-reveal class="max-w-5xl mx-auto px-6 py-20">
+    <div class="stage-rule" data-stage-rule></div>
+    <p class="mt-8 font-mono text-xs text-accent tracking-[0.08em]">1.0 LOG</p>
+    <h2 class="mt-2 font-display text-3xl">Type it once.</h2>
+    <p class="mt-4 text-muted max-w-xl">
+      Log entries per project with start and end times. “Same as previous” refills the
+      description from your last entry, and an on-device grammar check flags spelling and
+      grammar problems as you type — no key, no network. It runs again before save, so the
+      stored description is fixed too.
+    </p>
+  </section>
 
-    <!-- Signature "day timeline" graphic -->
-    <div class="border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[4px_4px_0_0_var(--color-border)]">
-      <div class="flex items-center justify-between mb-4">
-        <span class="text-xs font-mono text-[var(--color-muted)]">today’s timeline</span>
-        <span class="inline-flex items-center rounded-full border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 px-2.5 py-1 text-xs font-mono text-[var(--color-accent)]">
+  <!-- 2.0 VALIDATE -->
+  <section data-stage data-reveal class="max-w-5xl mx-auto px-6 py-20">
+    <div class="stage-rule" data-stage-rule></div>
+    <p class="mt-8 font-mono text-xs text-accent tracking-[0.08em]">2.0 VALIDATE</p>
+    <h2 class="mt-2 font-display text-3xl">The day has a shape.</h2>
+
+    <div class="mt-8 border border-rule bg-panel p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <span class="font-mono text-xs text-muted">today’s timeline</span>
+        <span class="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 font-mono text-xs text-signal-ink">
           7.5h / 8h
         </span>
       </div>
-      <div aria-hidden="true" class="relative h-14 rounded-md bg-[var(--color-bg)] border border-[var(--color-border)] overflow-hidden flex">
+      <div aria-hidden="true" class="relative flex h-14 overflow-hidden rounded-md border border-rule bg-paper">
         <!-- 09:00-11:30 API review (2.5h of 9h = 27.8%) -->
-        <div class="timeline-block h-full bg-[var(--color-accent)]/80 flex items-center justify-center text-[10px] font-mono text-[var(--color-on-accent)]" style="width: 27.8%;">
+        <div data-timeline-block class="flex h-full items-center justify-center bg-accent font-mono text-[10px] text-on-accent" style="width: 27.8%;">
           API review
         </div>
         <!-- 11:30-12:00 gap -->
         <div class="h-full" style="width: 5.6%;"></div>
         <!-- 12:00-13:00 lunch, hatched -->
         <div
-          class="h-full flex items-center justify-center text-[9px] font-mono text-[var(--color-muted)]"
-          style="width: 11.1%; background-image: repeating-linear-gradient(45deg, var(--color-border) 0, var(--color-border) 3px, transparent 3px, transparent 7px);"
+          class="flex h-full items-center justify-center font-mono text-[9px] text-muted"
+          style={`width: 11.1%; background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--color-signal) 35%, transparent) 0, color-mix(in srgb, var(--color-signal) 35%, transparent) 3px, transparent 3px, transparent 7px);`}
           title="lunch — never counted"
         >
           lunch
         </div>
         <!-- 13:00-18:00 MED-142 (5h of 9h = 55.5%) -->
-        <div class="timeline-block h-full bg-[var(--color-accent)]/80 flex items-center justify-center text-[10px] font-mono text-[var(--color-on-accent)]" style="width: 55.5%; animation-delay: 0.25s;">
+        <div data-timeline-block class="flex h-full items-center justify-center bg-accent font-mono text-[10px] text-on-accent" style="width: 55.5%;">
           MED-142
         </div>
       </div>
-      <div aria-hidden="true" class="relative mt-2 h-4 text-[10px] font-mono text-[var(--color-muted)]">
+      <div aria-hidden="true" class="relative mt-2 h-4 font-mono text-[10px] text-muted tabular-nums">
         <span class="absolute left-0">09:00</span>
         <span class="absolute left-[33.3%] -translate-x-1/2">12:00</span>
         <span class="absolute left-[44.4%]">13:00</span>
         <span class="absolute right-0">18:00</span>
       </div>
-      <p class="mt-4 text-xs text-[var(--color-muted)]">
+      <p class="mt-4 text-xs text-muted">
         12:00–13:00 lunch is hatched and dimmed — it’s never counted toward the 8-hour cap.
       </p>
     </div>
+
+    <p class="mt-8 text-muted max-w-xl">
+      A warning banner lists past working days in the current cutoff period with no entry —
+      weekends and company holidays excluded.
+    </p>
+
+    <figure data-parallax class="shot-frame mt-8 p-2">
+      <a class="shot block cursor-zoom-in" href={`${base}/holiday.png`} target="_blank" rel="noopener">
+        <img
+          src={`${base}/holiday.png`}
+          alt="Holiday page showing the July 2026 calendar and Thai holiday list"
+          width="1843"
+          height="832"
+          loading="lazy"
+          decoding="async"
+          class="w-full h-auto"
+        />
+      </a>
+      <figcaption class="mt-2 px-2 pb-2 font-mono text-xs text-muted">holiday calendar · click to zoom</figcaption>
+    </figure>
   </section>
 
-  <div class="max-w-5xl mx-auto px-6 py-2 text-center text-[var(--color-accent-deep)] text-lg" aria-hidden="true">✱ ✱ ✱ ✱</div>
+  <!-- 3.0 FILE -->
+  <section data-stage data-reveal class="max-w-5xl mx-auto px-6 py-20">
+    <div class="stage-rule" data-stage-rule></div>
+    <p class="mt-8 font-mono text-xs text-accent tracking-[0.08em]">3.0 FILE</p>
+    <h2 class="mt-2 font-display text-3xl">Filed into Msync and Park.</h2>
 
-  <!-- Auto-fill diptych -->
-  <section class="py-16">
-    <div class="max-w-5xl mx-auto px-6">
-      <h2 class="font-display font-extrabold uppercase tracking-[-0.01em] leading-[1.02] text-3xl">
-        <span class="text-[var(--color-accent-deep)]">◆</span> Filed for you. Twice.
-      </h2>
-      <p class="mt-2 text-[var(--color-muted)]">
-        Log your day once — TimeCheese files it into the company systems for you.
-      </p>
+    <p class="mt-4 text-muted max-w-xl">
+      Opens the company Msync site in an SSO-preserving window and fills your timesheet rows
+      into the embedded Appsmith form — no retyping, no lost session.
+    </p>
 
-      <!-- Row 1: text above, full-width proof shot -->
-      <div class="mt-16">
-        <h3 class="font-display text-xl font-bold">Msync auto-fill</h3>
-        <p class="mt-3 text-[var(--color-muted)] max-w-xl">
-          Opens the company Msync site in an SSO-preserving window and fills your timesheet
-          rows into the embedded Appsmith form — no retyping, no lost session.
-        </p>
-        <div class="mt-6 border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[4px_4px_0_0_var(--color-accent-deep)]">
-          <a href={`${base}/msync.png`} target="_blank" rel="noopener" class="shot block cursor-zoom-in">
-            <img
-              src={`${base}/msync.png`}
-              alt="Timesheets table with five rows multi-selected and a Mark done / Send to Msync action bar"
-              width="1843"
-              height="832"
-              loading="lazy"
-              decoding="async"
-              class="w-full h-auto"
-            />
-          </a>
-          <p class="mt-3 text-[10px] font-mono text-[var(--color-muted)]">5 rows selected — one click to Msync · click to zoom</p>
-        </div>
+    <figure data-parallax class="shot-frame mt-6 p-2">
+      <a class="shot block cursor-zoom-in" href={`${base}/msync.png`} target="_blank" rel="noopener">
+        <img
+          src={`${base}/msync.png`}
+          alt="Timesheets table with five rows multi-selected and a Mark done / Send to Msync action bar"
+          width="1843"
+          height="832"
+          loading="lazy"
+          decoding="async"
+          class="w-full h-auto"
+        />
+      </a>
+      <figcaption class="mt-2 px-2 pb-2 font-mono text-xs text-muted">5 rows selected — one click to Msync · click to zoom</figcaption>
+    </figure>
+
+    <p class="mt-8 text-muted max-w-xl">
+      Rows on the non-project code (MFE260055) file as “Non Project”, with the task picked by
+      project name. Mixed batches work.
+    </p>
+
+    <div class="mt-8 border border-rule bg-panel p-6">
+      <span class="font-mono text-xs text-muted">park · today</span>
+      <div class="mt-3 flex items-center justify-between border-b border-rule py-2 font-mono text-xs">
+        <span class="text-muted">plate กข 1234 · registered <span class="text-accent">✓</span></span>
       </div>
-
-      <!-- Row 2: proof left / text right (reversed on md+) -->
-      <div class="mt-16 grid md:grid-cols-2 gap-12 items-center">
-        <div class="md:order-2">
-          <h3 class="font-display text-xl font-bold">Park auto-fill</h3>
-          <p class="mt-3 text-[var(--color-muted)]">
-            Carpark registration filled the same way — pick a vehicle, TimeCheese completes the
-            form in the SSO window.
-          </p>
-        </div>
-        <div class="md:order-1 border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[4px_4px_0_0_var(--color-accent-deep)]">
-          <span class="font-mono text-xs text-[var(--color-muted)]">park · today</span>
-          <div class="mt-3">
-            <div class="flex items-center justify-between border-b border-[var(--color-border)] py-2 text-xs font-mono last:border-b-0">
-              <span class="text-[var(--color-muted)]">plate กข 1234 · registered <span class="text-[var(--color-accent-deep)]">✓</span></span>
-            </div>
-          </div>
-          <p class="mt-3 text-[10px] font-mono text-[var(--color-muted)]">vehicles managed in the Park tab</p>
-        </div>
-      </div>
+      <p class="mt-3 font-mono text-xs text-muted">vehicles managed in the Park tab</p>
     </div>
   </section>
 
-  <!-- And the rest -->
-  <section class="border-t-2 border-[var(--color-border)] py-16">
-    <div class="max-w-5xl mx-auto px-6">
-      <h2 class="font-display font-extrabold uppercase tracking-[-0.01em] leading-[1.02] text-3xl">
-        <span class="text-[var(--color-accent)]">◆</span> And the rest.
-      </h2>
-      <div class="mt-8 grid md:grid-cols-2 gap-8">
-        <div class="border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[4px_4px_0_0_var(--color-border)]">
-          <a href={`${base}/holiday.png`} target="_blank" rel="noopener" class="shot block cursor-zoom-in">
-            <img
-              src={`${base}/holiday.png`}
-              alt="Holiday page showing the July 2026 calendar and Thai holiday list"
-              width="1843"
-              height="832"
-              loading="lazy"
-              decoding="async"
-              class="w-full h-auto"
-            />
-          </a>
-          <p class="mt-3 text-[10px] font-mono text-[var(--color-muted)]">holiday calendar · click to zoom</p>
-        </div>
-        <div class="border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[4px_4px_0_0_var(--color-border)]">
-          <a href={`${base}/jira.png`} target="_blank" rel="noopener" class="shot block cursor-zoom-in">
-            <img
-              src={`${base}/jira.png`}
-              alt="Jira Assistant page with prompt box and Jira connected badge"
-              width="1843"
-              height="832"
-              loading="lazy"
-              decoding="async"
-              class="w-full h-auto"
-            />
-          </a>
-          <p class="mt-3 text-[10px] font-mono text-[var(--color-muted)]">jira assistant · click to zoom</p>
-        </div>
-      </div>
-    </div>
+  <!-- 4.0 RECALL -->
+  <section data-stage data-reveal class="max-w-5xl mx-auto px-6 py-20">
+    <div class="stage-rule" data-stage-rule></div>
+    <p class="mt-8 font-mono text-xs text-accent tracking-[0.08em]">4.0 RECALL</p>
+    <h2 class="mt-2 font-display text-3xl">Ask your own archive.</h2>
+
+    <p class="mt-4 text-muted max-w-xl">
+      Browse archived entries with search, plus monthly AI digests that summarize the month for
+      you.
+    </p>
+
+    <p class="mt-6 text-muted max-w-xl">
+      The Jira Assistant transitions Jira issues — “mark done + close Jira” straight from a
+      timesheet row. It runs on whichever CLI you already have, Claude Code or OpenAI Codex,
+      picked in Settings or auto-detected. Choose the model per CLI, and see what each run used:
+      model, tokens, cost, and when your rate-limit window resets.
+    </p>
+
+    <figure data-parallax class="shot-frame mt-6 p-2">
+      <a class="shot block cursor-zoom-in" href={`${base}/jira.png`} target="_blank" rel="noopener">
+        <img
+          src={`${base}/jira.png`}
+          alt="Jira Assistant page with prompt box and Jira connected badge"
+          width="1843"
+          height="832"
+          loading="lazy"
+          decoding="async"
+          class="w-full h-auto"
+        />
+      </a>
+      <figcaption class="mt-2 px-2 pb-2 font-mono text-xs text-muted">jira assistant · click to zoom</figcaption>
+    </figure>
+
+    <p class="mt-8 text-muted max-w-xl">
+      Ask questions about your own past work and get an answer with the entries it came from.
+      Date questions like “what did I work on last week?” read that week directly; topical ones
+      search by meaning.
+    </p>
   </section>
 
   <!-- Spec sheet -->
-  <section class="py-20">
-    <div class="max-w-5xl mx-auto px-6">
-      <h2 class="font-display font-extrabold uppercase tracking-[-0.01em] leading-[1.02] text-3xl">
-        <span class="text-[var(--color-accent)]">◆</span> Everything in the box.
-      </h2>
-      <p class="mt-2 text-[var(--color-muted)] max-w-2xl">
-        All of it free once your admin approves you. The two Pro rows aren’t a paid tier — the Jira
-        Assistant rides an AI CLI you already have (Claude Code or OpenAI Codex) plus the Atlassian
-        MCP server.
-      </p>
+  <section data-reveal class="max-w-5xl mx-auto px-6 py-20">
+    <h2 class="font-display text-3xl">Everything in the box.</h2>
+    <p class="mt-3 text-muted max-w-2xl">
+      All of it free once your admin approves you. The two Pro rows aren’t a paid tier — the Jira
+      Assistant rides an AI CLI you already have (Claude Code or OpenAI Codex) plus the Atlassian
+      MCP server.
+    </p>
 
-      <div class="mt-8 overflow-x-auto">
-        <table class="w-full text-sm min-w-[560px]">
-          <thead>
-            <tr class="border-b-2 border-[var(--color-border)]">
-              <th class="text-left py-3 font-semibold">Feature</th>
-              <th class="text-center py-3 font-semibold w-20">Free</th>
-              <th class="text-center py-3 font-semibold w-20">Pro</th>
+    <div class="mt-8 overflow-x-auto">
+      <table class="w-full text-sm min-w-[560px]">
+        <thead>
+          <tr class="border-b border-rule">
+            <th class="text-left py-3 font-semibold">Feature</th>
+            <th class="text-center py-3 font-semibold w-20">Free</th>
+            <th class="text-center py-3 font-semibold w-20">Pro</th>
+          </tr>
+        </thead>
+        <tbody>
+          {specRows.map((row) => (
+            <tr class="border-b border-rule">
+              <td class="py-3 pr-4">
+                <span class="font-semibold">{row.name}</span>
+                <span class="block text-muted text-xs mt-0.5">{row.desc}</span>
+              </td>
+              <td class:list={['py-3 text-center tabular-nums', row.free ? 'text-accent' : 'text-muted']}>{row.free ? '✓' : '—'}</td>
+              <td class:list={['py-3 text-center tabular-nums', row.pro ? 'text-accent' : 'text-muted']}>{row.pro ? '✓' : '—'}</td>
             </tr>
-          </thead>
-          <tbody>
-            {specRows.map((row) => (
-              <tr class="border-b-2 border-[var(--color-border)]">
-                <td class="py-3 pr-4">
-                  <span class="font-semibold">{row.name}</span>
-                  <span class="block text-[var(--color-muted)] text-xs mt-0.5">{row.desc}</span>
-                </td>
-                <td class:list={['py-3 text-center', row.free ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]']}>{row.free ? '✓' : '—'}</td>
-                <td class:list={['py-3 text-center', row.pro ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]']}>{row.pro ? '✓' : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p class="text-xs text-[var(--color-muted)] mt-3">
-        The Jira Assistant requires a locally installed Claude Code or OpenAI Codex CLI (your own subscription) plus the Atlassian MCP server.
-      </p>
+          ))}
+        </tbody>
+      </table>
     </div>
+    <p class="text-xs text-muted mt-3">
+      The Jira Assistant requires a locally installed Claude Code or OpenAI Codex CLI (your own
+      subscription) plus the Atlassian MCP server.
+    </p>
   </section>
-
-  <!-- Quickstart -->
-  <section class="py-16">
-    <div class="max-w-5xl mx-auto px-6">
-      <h2 class="font-display font-extrabold uppercase tracking-[-0.01em] leading-[1.02] text-3xl">
-        <span class="text-[var(--color-accent-deep)]">◆</span> Quickstart.
-      </h2>
-      <ol class="mt-8 max-w-2xl">
-        <li class="flex gap-5 border-l-2 border-[var(--color-border)] pl-6 pb-8 last:pb-0">
-          <span class="font-mono text-sm text-[var(--color-accent)]">01</span>
-          <div>
-            <h3 class="font-semibold">Install</h3>
-            <p class="text-sm text-[var(--color-muted)]">Run the .msi on Windows or drag to Applications on macOS.</p>
-          </div>
-        </li>
-        <li class="flex gap-5 border-l-2 border-[var(--color-border)] pl-6 pb-8 last:pb-0">
-          <span class="font-mono text-sm text-[var(--color-accent)]">02</span>
-          <div>
-            <h3 class="font-semibold">Request access</h3>
-            <p class="text-sm text-[var(--color-muted)]">Click "New here?", verify your email, set a password, then wait for admin approval.</p>
-          </div>
-        </li>
-        <li class="flex gap-5 border-l-2 border-[var(--color-border)] pl-6 pb-8 last:pb-0">
-          <span class="font-mono text-sm text-[var(--color-accent)]">03</span>
-          <div>
-            <h3 class="font-semibold">Log your first entry</h3>
-            <p class="text-sm text-[var(--color-muted)]">Pick a project, date, and time — TimeCheese validates it for you.</p>
-          </div>
-        </li>
-      </ol>
-      <p class="mt-2 text-sm">
-        <a href={`${base}/docs/quickstart/`} class="text-[var(--color-accent)] hover:text-[var(--color-accent-deep)] font-semibold">Full quickstart guide →</a>
-      </p>
-    </div>
-  </section>
-
-  <div class="max-w-5xl mx-auto px-6 py-2 text-center text-[var(--color-accent-deep)] text-lg" aria-hidden="true">✱ ✱ ✱ ✱</div>
 
   <!-- Download -->
-  <section id="download" class="py-20">
-    <div class="max-w-5xl mx-auto px-6">
-      <h2 class="font-display font-extrabold uppercase tracking-[-0.01em] leading-[1.02] text-3xl">
-        <span class="text-[var(--color-accent)]">◆</span> Download.
-      </h2>
-      <div class="mt-8 grid sm:grid-cols-2 gap-8">
-        <div class="border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[4px_4px_0_0_var(--color-border)]">
-          <h3 class="font-semibold">Windows</h3>
-          <p class="mt-1.5 text-sm text-[var(--color-muted)]">.msi installer or .exe setup.</p>
-          <div class="mt-4 flex flex-wrap gap-3">
-            <a href={msiUrl} class="text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-deep)]">.msi ↓</a>
-            <a href={exeUrl} class="text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-deep)]">.exe ↓</a>
-          </div>
-        </div>
-        <div class="border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[4px_4px_0_0_var(--color-border)]">
-          <h3 class="font-semibold">macOS</h3>
-          <p class="mt-1.5 text-sm text-[var(--color-muted)]">Universal .dmg — Apple Silicon + Intel.</p>
-          <div class="mt-4 flex flex-wrap gap-3">
-            <a href={dmgUrl} class="text-sm font-semibold text-[var(--color-accent)] hover:text-[var(--color-accent-deep)]">.dmg ↓</a>
-          </div>
+  <section id="download" data-reveal class="max-w-5xl mx-auto px-6 py-20">
+    <h2 class="font-display text-3xl">Download.</h2>
+    <div class="mt-8 grid sm:grid-cols-2 gap-8">
+      <div class="border border-rule bg-panel p-6">
+        <h3 class="font-semibold">Windows</h3>
+        <p class="mt-1.5 text-sm text-muted">.msi installer or .exe setup.</p>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <a href={msiUrl} class="whitespace-nowrap text-sm font-semibold text-accent hover:text-accent-deep">.msi ↓</a>
+          <a href={exeUrl} class="whitespace-nowrap text-sm font-semibold text-accent hover:text-accent-deep">.exe ↓</a>
         </div>
       </div>
-      <p class="mt-6 text-sm">
-        <a href={RELEASES_URL} class="text-[var(--color-accent)] hover:text-[var(--color-accent-deep)] font-semibold">All versions →</a>
-      </p>
-
-      <p class="mt-10 text-[var(--color-muted)]">
-        Request access from the sign-in screen — your admin approves you, then you're in.
-        <a href={`${base}/docs/getting-access/`} class="text-[var(--color-accent)] hover:text-[var(--color-accent-deep)] font-semibold">Getting access →</a>
-      </p>
+      <div class="border border-rule bg-panel p-6">
+        <h3 class="font-semibold">macOS</h3>
+        <p class="mt-1.5 text-sm text-muted">Universal .dmg — Apple Silicon + Intel.</p>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <a href={dmgUrl} class="whitespace-nowrap text-sm font-semibold text-accent hover:text-accent-deep">.dmg ↓</a>
+        </div>
+      </div>
     </div>
+    <p class="mt-6 text-sm">
+      <a href={releasesUrl} class="whitespace-nowrap text-accent hover:text-accent-deep font-semibold">All versions →</a>
+    </p>
+
+    <p class="mt-10 text-muted">
+      Request access from the sign-in screen — your admin approves you, then you're in.
+      <a href={`${base}/docs/getting-access/`} class="whitespace-nowrap text-accent hover:text-accent-deep font-semibold">Getting access →</a>
+    </p>
+  </section>
+
+  <!-- Getting started -->
+  <section data-reveal class="max-w-5xl mx-auto px-6 py-20">
+    <h2 class="font-display text-3xl">Getting started.</h2>
+    <div class="mt-8 grid sm:grid-cols-3 gap-8">
+      <div>
+        <h3 class="font-semibold">Install</h3>
+        <p class="mt-2 text-sm text-muted">Run the .msi on Windows or drag to Applications on macOS.</p>
+      </div>
+      <div>
+        <h3 class="font-semibold">Request access</h3>
+        <p class="mt-2 text-sm text-muted">Click "New here?", verify your email, set a password, then wait for admin approval.</p>
+      </div>
+      <div>
+        <h3 class="font-semibold">Log your first entry</h3>
+        <p class="mt-2 text-sm text-muted">Pick a project, date, and time — TimeCheese validates it for you.</p>
+      </div>
+    </div>
+    <p class="mt-8 text-sm">
+      <a href={`${base}/docs/quickstart/`} class="whitespace-nowrap text-accent hover:text-accent-deep font-semibold">Full quickstart guide →</a>
+    </p>
   </section>
 </Base>
