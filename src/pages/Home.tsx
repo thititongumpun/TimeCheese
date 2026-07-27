@@ -161,8 +161,9 @@ export function Home() {
     loadHolidayBanner()
   }
 
-  // Every one of today's/tomorrow's holidays that has no row yet — a long weekend must offer
-  // both days at once. The check hits the DB rather than `timesheets` state so it survives a
+  // Every holiday in the upcoming run that has no row yet — a long weekend must offer all its
+  // days at once. One fetchDaySlots per candidate; the run is a handful of days, so no batching.
+  // The check hits the DB rather than `timesheets` state so it survives a
   // reload and ignores the active filters.
   async function loadHolidayBanner() {
     holidaysCache ??= fetchHolidays().then((res) => {

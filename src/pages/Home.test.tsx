@@ -110,6 +110,30 @@ describe('Home holiday banner', () => {
     }, { summarize: false })
   })
 
+  it('offers the whole long weekend on the Monday before it', async () => {
+    // Mon 27 Jul: Tue 28 + Wed 29 are a consecutive run, so both must be offered now.
+    m.fetchHolidays.mockResolvedValue({
+      data: [{ date: HOLIDAY_DATE, name: HOLIDAY_NAME }, { date: '2026-07-29', name: 'Day After' }],
+      error: null,
+    })
+
+    const { Home } = await import('./Home')
+    render(<Home />)
+
+    expect(await screen.findByText(`Tomorrow is ${HOLIDAY_NAME}`)).toBeTruthy()
+    expect(screen.getByText('Wed 29 Jul is Day After')).toBeTruthy()
+    const buttons = screen.getAllByRole('button', { name: /add to timesheet/i })
+    expect(buttons).toHaveLength(2)
+
+    fireEvent.click(buttons[1])
+    await waitFor(() => expect(m.createTimesheet).toHaveBeenCalledTimes(1))
+    expect(m.createTimesheet.mock.calls[0][0].date_memo).toBe('2026-07-29')
+
+    fireEvent.click(screen.getAllByRole('button', { name: /add to timesheet/i })[0])
+    await waitFor(() => expect(m.createTimesheet).toHaveBeenCalledTimes(2))
+    expect(m.createTimesheet.mock.calls[1][0].date_memo).toBe(HOLIDAY_DATE)
+  })
+
   it('stays hidden when the holiday already has a timesheet row', async () => {
     m.fetchDaySlots.mockResolvedValue({
       data: [{ id: 't1', start_time: '09:00:00', end_time: '18:00:00' }],

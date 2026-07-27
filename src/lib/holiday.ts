@@ -1,4 +1,4 @@
-// Holiday banner: is today (or tomorrow) a public holiday needing a "Holiday" timesheet row?
+// Holiday banner: which upcoming days are public holidays needing a "Holiday" timesheet row?
 
 import type { Holiday } from '../types'
 import { ymd } from './missing-days'
@@ -6,20 +6,31 @@ import { ymd } from './missing-days'
 // The user's existing project for holiday entries.
 export const HOLIDAY_PROJECT_NAME = 'Holiday'
 
-// Today's holiday first, then tomorrow's — back-to-back holidays both need offering, so the
-// caller can fall through to the next one when the first is already booked. Weekend candidates
-// are skipped — no timesheet row is due, matching missingWorkdays' weekend skip.
+// Today, then tomorrow, then the rest of the consecutive run — a Tue+Wed long weekend must be
+// fully offerable on the Monday, not one day at a time. The walk stops at the first date absent
+// from the feed; a weekend day that IS in the feed keeps the run alive but is never returned
+// itself (no timesheet row is due, matching missingWorkdays' weekend skip).
 export function upcomingHolidays(
   holidays: Holiday[],
   today: Date,
-): { date: string; name: string; when: 'Today' | 'Tomorrow' }[] {
-  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
-  const found = []
-  for (const [day, when] of [[today, 'Today'], [tomorrow, 'Tomorrow']] as const) {
-    if (day.getDay() === 0 || day.getDay() === 6) continue
+): { date: string; name: string; when: string }[] {
+  const found: { date: string; name: string; when: string }[] = []
+  let day = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  // ponytail: 10-day ceiling on the walk so a malformed feed can't loop forever — raise it only
+  // if a real run of holidays ever exceeds that.
+  for (let i = 0; i < 10; i++) {
     const key = ymd(day)
     const hit = holidays.find((h) => h.date === key)
-    if (hit) found.push({ date: hit.date, name: hit.name, when })
+    if (!hit) {
+      // Today being an ordinary day still lets tomorrow start a run; a gap after that ends it.
+      if (i > 0) break
+    } else if (day.getDay() !== 0 && day.getDay() !== 6) {
+      const when = i === 0 ? 'Today'
+        : i === 1 ? 'Tomorrow'
+        : day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+      found.push({ date: hit.date, name: hit.name, when })
+    }
+    day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
   }
   return found
 }
