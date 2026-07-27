@@ -3,6 +3,43 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.17.0] - 2026-07-27
+
+### Added
+
+- **A public holiday goes in with one click.** When today or tomorrow is a Thai
+  public holiday you have no entry for, the Home page says so — "Tomorrow is
+  วันเฉลิมพระชนมพรรษาพระบาทสมเด็จพระเจ้าอยู่หัว" — with an Add button. It files the
+  entry on the exact date, 09:00–18:00, with the holiday's name as the
+  description, against your own "Holiday" project, already marked Complete. If
+  the holiday runs over several days, every day of it gets its own row, so a
+  long weekend goes in on the Monday before instead of one day at a time.
+- **Holiday entries are left out of Msync.** Msync fills holidays itself, so
+  sending them again would double-book you. Select a mix and only the real work
+  is sent, with a note saying how many holidays were skipped; select nothing but
+  holidays and it tells you rather than opening an empty form.
+- **Every DaisyUI theme.** The theme picker now offers all 35 built-in themes
+  alongside the two TimeCheese ones, and the sidebar list scrolls instead of
+  running off the bottom of the screen.
+
+### Fixed
+
+- **The description box is usable again.** It was three lines tall, and the
+  "similar past entries" and grammar suggestions stacked underneath as full
+  menus that pushed it out of view. The box now grows as you type, and both
+  suggestion lists sit on a single line of chips.
+- **Forms no longer scroll sideways.** A long suggestion stretched the entry
+  dialog wider than the window. Every form field in the app was open to this;
+  it is fixed for all of them at once.
+- **A Cloudflare outage no longer loses the entry.** Creating an entry asked the
+  AI for a summary first and gave up entirely if that failed. The entry is now
+  saved either way — only its summary is missing. Holiday entries skip the AI
+  altogether, so a holiday's name is never quietly reworded.
+- **The monthly digest stops repeating itself.** A month with several `[IMP]`
+  entries came back with `[IMP]` printed four separate times instead of one
+  heading with all the work under it. Repeated headings are now folded together;
+  `[IMP]` and `[IMP][PersonnelCost]` stay separate, as they should.
+
 ## [4.16.0] - 2026-07-25
 
 ### Added
