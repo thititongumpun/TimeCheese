@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { fetchTimesheets, fetchArchivedTimesheetsInRange, deleteTimesheet, updateTimesheet, updateTimesheets } from '../services/timesheets'
+import { fetchTimesheets, fetchArchivedTimesheetsInRange, deleteTimesheet, updateTimesheet, updateTimesheets, createTimesheet, fetchDaySlots } from '../services/timesheets'
 import { fetchActiveProjects } from '../services/projects'
 import { agentProvider, modelFor, type AgentReply } from '../lib/agent'
 import { fetchHolidays } from '../services/holidays'
@@ -10,6 +10,8 @@ import { confirmDialog } from '../lib/confirm'
 import { tidySummary } from '../lib/summaryText'
 import { APPSMITH_URL } from '../lib/appsmith'
 import { ymd, periodStart, missingWorkdays } from '../lib/missing-days'
+import { isHolidayRow, upcomingHolidays, HOLIDAY_PROJECT_NAME } from '../lib/holiday'
+import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../lib/timeslot'
 import { TimesheetTable } from '../components/timesheets/TimesheetTable'
 import { TimesheetFilters } from '../components/timesheets/TimesheetFilters'
 import { TimesheetModal } from '../components/timesheets/TimesheetModal'
@@ -91,6 +93,32 @@ function MissingDaysBanner({ days, onDismiss }: { days: string[]; onDismiss: () 
   )
 }
 
+type Holiday = ReturnType<typeof upcomingHolidays>[number]
+
+// One row per unbooked holiday — a long weekend needs both days addable, not one per day.
+function HolidayBanner(
+  { holidays, addingDate, onAdd, onDismiss }:
+  { holidays: Holiday[]; addingDate: string | null; onAdd: (h: Holiday) => void; onDismiss: () => void },
+) {
+  if (holidays.length === 0) return null
+  return (
+    <div class="alert alert-info mb-4">
+      <div class="flex w-full flex-col gap-2">
+        {holidays.map((h) => (
+          <div key={h.date} class="flex items-center justify-between gap-3">
+            <span>{h.when} is {h.name}</span>
+            <button class="btn btn-sm" onClick={() => onAdd(h)} disabled={addingDate !== null}>
+              {addingDate === h.date && <span class="loading loading-spinner loading-xs" />}
+              Add to timesheet
+            </button>
+          </div>
+        ))}
+      </div>
+      <button class="btn btn-ghost btn-xs" onClick={onDismiss} aria-label="Dismiss">✕</button>
+    </div>
+  )
+}
+
 function defaultFilters(): Filters {
   const now = new Date()
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -117,6 +145,9 @@ export function Home() {
   const [fillLog, setFillLog] = useState<FillRun[]>(readFillLog)
   const [missingDays, setMissingDays] = useState<string[]>([])
   const [missingDismissed, setMissingDismissed] = useState(false)
+  const [holidays, setHolidays] = useState<Holiday[]>([])
+  const [holidayDismissed, setHolidayDismissed] = useState(false)
+  const [addingHolidayDate, setAddingHolidayDate] = useState<string | null>(null)
 
   async function loadTimesheets() {
     if (timesheets.length === 0) setLoading(true)
@@ -127,6 +158,28 @@ export function Home() {
     setSelectedIds(new Set())
     setLoading(false)
     loadMissingDays()
+    loadHolidayBanner()
+  }
+
+  // Every one of today's/tomorrow's holidays that has no row yet — a long weekend must offer
+  // both days at once. The check hits the DB rather than `timesheets` state so it survives a
+  // reload and ignores the active filters.
+  async function loadHolidayBanner() {
+    holidaysCache ??= fetchHolidays().then((res) => {
+      if (res.error) holidaysCache = null
+      return res
+    })
+    const { data: feed, error: holidaysError } = await holidaysCache
+    if (holidaysError) {
+      setHolidays([])
+      return
+    }
+    const unbooked: Holiday[] = []
+    for (const next of upcomingHolidays(feed ?? [], new Date())) {
+      const { data, error } = await fetchDaySlots(next.date)
+      if (!error && (data ?? []).length === 0) unbooked.push(next)
+    }
+    setHolidays(unbooked)
   }
 
   // Past working days in the current cutoff period with zero entries. Skipped entirely
@@ -270,6 +323,53 @@ export function Home() {
     }
   }
 
+  // Full-day 09:00–18:00 row on the user's existing "Holiday" project.
+  async function handleAddHoliday(holiday: Holiday) {
+    const project = projects.find((p) => p.project_name === HOLIDAY_PROJECT_NAME)
+    if (!project) {
+      setError('No active project named "Holiday" — create or reactivate it on the Projects page.')
+      return
+    }
+    setAddingHolidayDate(holiday.date)
+    setError(null)
+    setActionMessage(null)
+    try {
+      // Same no-overlap + 8h/day check the modal runs; 09:00–18:00 is exactly 8 worked hours,
+      // so this only blocks when the day already has an entry.
+      const { data: dayRows, error: dayError } = await fetchDaySlots(holiday.date)
+      if (dayError) {
+        setError(dayError.message)
+        return
+      }
+      const others = (dayRows ?? []).filter((r): r is typeof r & Slot => !!r.start_time && !!r.end_time)
+      const timeError = validateTimeslot(DAY_START, DAY_END, others)
+      if (timeError) {
+        setError(timeError)
+        return
+      }
+      // No AI summary — the summarizer would rewrite the holiday's Thai name.
+      const { error } = await createTimesheet({
+        date_memo: holiday.date,
+        description: holiday.name,
+        project_id: project.id,
+        is_complete: true,
+        start_time: DAY_START,
+        end_time: DAY_END,
+      }, { summarize: false })
+      if (error) {
+        setError(error.message)
+        return
+      }
+      setHolidays((current) => current.filter((h) => h.date !== holiday.date))
+      setActionMessage(`${holiday.name} added to your timesheet.`)
+      loadTimesheets()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the holiday entry.')
+    } finally {
+      setAddingHolidayDate(null)
+    }
+  }
+
   function toggleSelect(id: string) {
     setSelectedIds((current) => {
       const next = new Set(current)
@@ -298,7 +398,14 @@ export function Home() {
   // Opens Appsmith in a Tauri webview with a fill script injected (Rust command).
   async function handleSendToAppsmith() {
     // Same order as ROWS in the fill script, so "first n filled" maps back to these.
-    const sent = timesheets.filter((t) => selectedIds.has(t.id))
+    // Holiday rows are dropped — Msync fills holidays itself, sending them would double-book.
+    const selected = timesheets.filter((t) => selectedIds.has(t.id))
+    const sent = selected.filter((t) => !isHolidayRow(t))
+    if (sent.length === 0) {
+      setError('Only Holiday entries selected — Msync fills those automatically.')
+      return
+    }
+    const skipped = selected.length - sent.length
     const rows = sent.map((t) => ({
       date: t.date_memo, // raw ISO — the fill script formats it for the date picker
       projectNo: t.projects?.project_no ?? '',
@@ -313,7 +420,7 @@ export function Home() {
     setActionMessage(null)
     try {
       await invoke('open_appsmith_filler', { url: APPSMITH_URL, rowsJson: JSON.stringify(rows) })
-      setActionMessage(`Appsmith opened with ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'} — click "Fill" on the form page.`)
+      setActionMessage(`Appsmith opened with ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'} — click "Fill" on the form page.${skipped ? ` — ${skipped} holiday entr${skipped === 1 ? 'y' : 'ies'} skipped.` : ''}`)
       // Fired by Rust with the number of rows the fill script actually created in msync.
       const unlisten = await listen<number>('appsmith-filled', async ({ payload: filled }) => {
         unlisten()
@@ -362,6 +469,14 @@ export function Home() {
       <CutoffCountdown />
       {!missingDismissed && (
         <MissingDaysBanner days={missingDays} onDismiss={() => setMissingDismissed(true)} />
+      )}
+      {!holidayDismissed && (
+        <HolidayBanner
+          holidays={holidays}
+          addingDate={addingHolidayDate}
+          onAdd={handleAddHoliday}
+          onDismiss={() => setHolidayDismissed(true)}
+        />
       )}
       <header class="flex items-end justify-between gap-4 mb-6">
         <div>

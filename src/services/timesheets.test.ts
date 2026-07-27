@@ -158,21 +158,49 @@ describe('timesheets service', () => {
     expect(chain.single).toHaveBeenCalled()
   })
 
-  it('does not insert when Cloudflare AI fails', async () => {
-    const chain = makeChain({ data: null, error: null })
+  it('createTimesheet with summarize:false skips the worker and inserts a null ai_summary', async () => {
+    const chain = makeChain({ data: { id: '1' }, error: null })
+    mockFrom.mockReturnValue(chain)
+
+    const input = {
+      date_memo: '2026-07-28',
+      description: 'วันเฉลิมพระชนมพรรษาพระบาทสมเด็จพระเจ้าอยู่หัว',
+      project_id: 'p-holiday',
+      is_complete: true,
+      start_time: '09:00',
+      end_time: '18:00',
+    }
+    await createTimesheet(input, { summarize: false })
+
+    expect(mockSummarizeDescription).not.toHaveBeenCalled()
+    expect(chain.insert).toHaveBeenCalledWith({
+      ...input,
+      ai_summary: null,
+      user_id: 'user-1',
+    })
+  })
+
+  it('still inserts with a null ai_summary when Cloudflare AI fails', async () => {
+    const chain = makeChain({ data: { id: '1' }, error: null })
     mockFrom.mockReturnValue(chain)
     mockSummarizeDescription.mockRejectedValue(new Error('Cloudflare AI request failed.'))
 
-    await expect(createTimesheet({
+    const input = {
       date_memo: '2026-06-11',
       description: 'Did stuff',
       project_id: null,
       is_complete: false,
       start_time: null,
       end_time: null,
-    })).rejects.toThrow('Cloudflare AI request failed.')
+    }
+    const { error } = await createTimesheet(input)
 
-    expect(chain.insert).not.toHaveBeenCalled()
+    expect(error).toBeNull()
+    expect(chain.insert).toHaveBeenCalledWith({
+      ...input,
+      ai_summary: null,
+      user_id: 'user-1',
+    })
   })
 
   it('does not call Cloudflare AI or insert when there is no authenticated user', async () => {

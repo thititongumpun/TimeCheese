@@ -211,9 +211,17 @@ export async function getOrCreateMonthlySummary(
   return summary
 }
 
-export async function createTimesheet(data: TimesheetInput) {
+// summarize:false skips the Worker entirely — holiday rows carry a Thai holiday name the
+// "technical writing editor" prompt would happily rewrite, and that mangled text is what
+// Home and the monthly digest read.
+export async function createTimesheet(
+  data: TimesheetInput,
+  { summarize = true }: { summarize?: boolean } = {},
+) {
   const userId = await getAuthenticatedUserId()
-  const aiSummary = await summarizeDescription(data.description)
+  // Worker down or unconfigured — still save the entry, just without a summary.
+  // Losing the row would lose the user's work; losing ai_summary loses nothing.
+  const aiSummary = summarize ? await summarizeDescription(data.description).catch(() => null) : null
 
   return supabase
     .from('timesheets')
