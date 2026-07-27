@@ -72,6 +72,37 @@ export function dropInventedTags(original: string, summary: string): string {
   return summary.replace(/\[([^\]]+)\]/g, '$1')
 }
 
+// The monthly digest is supposed to print each tag heading once, but llama walks the
+// entries in order and reprints the heading per entry (four "[IMP]" blocks for one
+// month). Fold repeats back together, keeping first-appearance order and dropping
+// bullets that are duplicated verbatim. Distinct runs stay distinct — "[IMP]" and
+// "[IMP][PersonnelCost]" are different tags, not the same one twice.
+export function mergeTagGroups(summary: string): string {
+  const order: string[] = []
+  const groups = new Map<string, Set<string>>()
+  const preamble: string[] = []
+  let current: Set<string> | null = null
+
+  for (const raw of summary.split('\n')) {
+    const line = raw.trim()
+    if (/^(?:\[[^\]]+\])+$/.test(line)) {
+      if (!groups.has(line)) {
+        groups.set(line, new Set())
+        order.push(line)
+      }
+      current = groups.get(line)!
+      continue
+    }
+    if (!line) continue
+    if (current) current.add(line)
+    else preamble.push(line) // text before any heading — leave it alone
+  }
+
+  if (!order.length) return summary // no headings to merge
+  const sections = order.map((tag) => [tag, ...groups.get(tag)!].join('\n'))
+  return (preamble.length ? [preamble.join('\n'), ...sections] : sections).join('\n\n')
+}
+
 interface AiBinding {
   run(
     model: string,
@@ -166,7 +197,7 @@ export default {
         })
         const summary = result.response?.trim()
         if (!summary) return json({ error: 'Cloudflare AI returned an empty monthly summary.' }, 502)
-        return json({ summary: restoreBracketTags(text, summary) })
+        return json({ summary: mergeTagGroups(restoreBracketTags(text, summary)) })
       } catch (err) {
         const reason = err instanceof Error ? err.message : 'unknown error'
         return json({ error: `Cloudflare AI request failed: ${reason}` }, 502)
