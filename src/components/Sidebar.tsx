@@ -288,7 +288,7 @@ export function Sidebar() {
               <path d="M1799 349l242 241-1017 1017L7 590l242-241 775 775 775-775z" />
             </svg>
           </div>
-          <ul tabindex={0} class="dropdown-content z-30 w-44 rounded-box bg-base-300 p-2 shadow-2xl">
+          <ul tabindex={0} class="dropdown-content z-30 max-h-80 w-44 overflow-y-auto rounded-box bg-base-300 p-2 shadow-2xl">
             {THEMES.map((t) => (
               <li key={t}>
                 <input

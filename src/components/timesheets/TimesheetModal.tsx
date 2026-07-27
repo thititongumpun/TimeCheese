@@ -197,52 +197,55 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
                 </button>
               )}
             </div>
+            {/* Grows with the text (native field-sizing) instead of standing tall and making
+                the whole modal scroll. rows is the fallback where field-sizing is unsupported. */}
             <textarea
               id="description"
-              class="textarea w-full"
+              class="textarea w-full resize-y field-sizing-content min-h-24 max-h-[40vh]"
               value={description}
               onInput={(e) => setDescription(e.currentTarget.value)}
-              rows={3}
+              rows={4}
               required
               autofocus
             />
+            {/* Chips, not stacked menus — suggestions used to push the textarea off-screen. */}
             {suggestions.length > 0 && (
-              <ul class="menu menu-sm bg-base-200 rounded-box mt-1 p-1">
-                <li class="menu-title text-xs">Similar past entries</li>
+              <div class="flex flex-wrap items-center gap-1 mt-1">
+                <span class="text-xs opacity-60">Similar:</span>
                 {suggestions.map((s) => (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      class="text-left"
-                      onClick={() => {
-                        setDescription(s.description)
-                        setSuggestions([])
-                      }}
-                    >
-                      <span class="line-clamp-1">{s.description}</span>
-                    </button>
-                  </li>
+                  <button
+                    key={s.id}
+                    type="button"
+                    class="btn btn-xs btn-ghost bg-base-200 min-w-0 max-w-full"
+                    title={s.description}
+                    onClick={() => {
+                      setDescription(s.description)
+                      setSuggestions([])
+                    }}
+                  >
+                    <span class="min-w-0 truncate">{s.description}</span>
+                  </button>
                 ))}
-              </ul>
+              </div>
             )}
             {linted.text === description && linted.lints.length > 0 && (
-              <ul class="menu menu-sm bg-base-200 rounded-box mt-1 p-1">
-                <li class="menu-title text-xs">Grammar</li>
+              <div class="flex flex-wrap items-center gap-1 mt-1">
+                <span class="text-xs opacity-60">Grammar:</span>
                 {linted.lints.map((lint, i) => (
-                  <li key={`${lint.start}-${lint.end}-${i}`}>
-                    <button
-                      type="button"
-                      class="text-left"
-                      onClick={() => setDescription(applyLint(description, lint))}
-                    >
-                      <span class="line-clamp-1">{lint.message}</span>
-                      {lint.replacement !== null && (
-                        <span class="badge badge-warning badge-sm">{lint.replacement}</span>
-                      )}
-                    </button>
-                  </li>
+                  <button
+                    key={`${lint.start}-${lint.end}-${i}`}
+                    type="button"
+                    class="btn btn-xs btn-ghost bg-base-200 min-w-0 max-w-full"
+                    title={lint.message}
+                    onClick={() => setDescription(applyLint(description, lint))}
+                  >
+                    <span class="min-w-0 truncate">{lint.message}</span>
+                    {lint.replacement !== null && (
+                      <span class="badge badge-warning badge-xs">{lint.replacement}</span>
+                    )}
+                  </button>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
           <div class="fieldset mb-3">

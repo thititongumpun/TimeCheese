@@ -7,7 +7,8 @@
 }
 
 @plugin "daisyui" {
-  themes: timecheese --default, timecheese-dark --prefersdark, light, dark, retro, nord, abyss, aqua, lofi, acid, dracula;
+  /* themes: timecheese --default, timecheese-dark --prefersdark, light, dark, retro, nord, abyss, aqua, lofi, acid, dracula; */
+  themes: all;
 }
 
 @plugin "daisyui/theme" {
@@ -83,6 +84,14 @@
 .btn:active:not(:disabled) {
   scale: 0.975;
   filter: brightness(1.06);
+}
+
+/* daisyUI v5 .fieldset is display:grid (1fr column) and grid items default to
+   min-width:auto, so any nowrap content (e.g. the truncated suggestion/lint chips
+   in TimesheetModal) forces the column to its full text width and the modal
+   overflows horizontally. Let fieldset children shrink so truncate can engage. */
+.fieldset > * {
+  min-width: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
