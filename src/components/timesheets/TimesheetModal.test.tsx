@@ -21,6 +21,13 @@ vi.mock('../../services/timesheets', () => ({
   fetchPreviousEntryText: mockFetchPrevious,
 }))
 
+const { mockTranslateToEnglish } = vi.hoisted(() => ({ mockTranslateToEnglish: vi.fn() }))
+
+vi.mock('../../services/cloudflare-ai', () => ({
+  transcribeAudio: vi.fn(),
+  translateToEnglish: mockTranslateToEnglish,
+}))
+
 beforeAll(() => {
   // jsdom has no dialog implementation; the modal calls showModal() on mount. The stub must
   // set `open` like the real thing — a closed <dialog> is hidden from the accessibility tree,
@@ -116,5 +123,38 @@ describe('TimesheetModal "Same as previous"', () => {
     // Positive control: the modal really did render in edit mode.
     expect(screen.getByRole('heading', { name: /edit entry/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /same as previous/i })).toBeNull()
+  })
+})
+
+describe('TimesheetModal "→ EN" translation', () => {
+  it('replaces the description with the translated text', async () => {
+    mockCheckGrammar.mockResolvedValue([])
+    mockTranslateToEnglish.mockResolvedValue('[IMP]\n- Test database')
+
+    const { TimesheetModal } = await import('./TimesheetModal')
+    render(<TimesheetModal timesheet={null} projects={[]} onClose={vi.fn()} />)
+
+    const textarea = screen.getByLabelText(/description/i) as HTMLTextAreaElement
+    fireEvent.input(textarea, { target: { value: 'ทดสอบฐานข้อมูล' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /→ en/i }))
+
+    await waitFor(() => expect(textarea.value).toBe('[IMP]\n- Test database'))
+  })
+
+  it('shows an error and keeps the typed text when translation fails', async () => {
+    mockCheckGrammar.mockResolvedValue([])
+    mockTranslateToEnglish.mockRejectedValue(new Error('Cloudflare AI returned an empty translation.'))
+
+    const { TimesheetModal } = await import('./TimesheetModal')
+    render(<TimesheetModal timesheet={null} projects={[]} onClose={vi.fn()} />)
+
+    const textarea = screen.getByLabelText(/description/i) as HTMLTextAreaElement
+    fireEvent.input(textarea, { target: { value: 'ทดสอบฐานข้อมูล' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /→ en/i }))
+
+    await screen.findByText(/cloudflare ai returned an empty translation/i)
+    expect(textarea.value).toBe('ทดสอบฐานข้อมูล')
   })
 })

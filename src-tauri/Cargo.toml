@@ -1,6 +1,6 @@
 [package]
 name = "timesh1t"
-version = "4.17.0"
+version = "4.18.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -28,6 +28,11 @@ tauri-plugin-clipboard-manager = "2"
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-fs = "2.5.1"
 harper-core = { version = "2.5", default-features = false }
+
+# Same webkit2gtk version Tauri/wry already pull in on Linux (pinned to match Cargo.lock exactly,
+# avoiding a second copy being resolved) — used in lib.rs to allow mic access via permission-request.
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "=2.0.2"
 
 # Ship a smaller binary: the Tauri updater re-downloads the whole bundle every release,
 # so bytes here are paid on every auto-update, not just first install.

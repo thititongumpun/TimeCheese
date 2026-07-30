@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { summarizeDescription, embedText, chatOverContext } from './cloudflare-ai'
+import { summarizeDescription, embedText, chatOverContext, transcribeAudio, translateToEnglish } from './cloudflare-ai'
 
 function mockJson(body: unknown, status = 200) {
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
@@ -88,5 +88,62 @@ describe('chatOverContext', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ task: 'chat', question: 'what did I do?', context: '- entry' }),
     })
+  })
+})
+
+describe('transcribeAudio', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it('returns the transcription and sends task:transcribe with base64 audio', async () => {
+    vi.stubEnv('VITE_CLOUDFLARE_AI_URL', 'https://example.workers.dev')
+    mockJson({ text: 'Worked on billing module.' })
+
+    await expect(transcribeAudio(new Blob(['ABC']))).resolves.toBe('Worked on billing module.')
+    expect(fetch).toHaveBeenCalledWith('https://example.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: 'transcribe', audio: 'QUJD' }),
+    })
+  })
+
+  it('throws when the Worker request fails', async () => {
+    vi.stubEnv('VITE_CLOUDFLARE_AI_URL', 'https://example.workers.dev')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({ error: 'Whisper unavailable' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    ))
+
+    await expect(transcribeAudio(new Blob(['ABC']))).rejects.toThrow('Whisper unavailable')
+  })
+})
+
+describe('translateToEnglish', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it('returns the translation and sends task:translate with text', async () => {
+    vi.stubEnv('VITE_CLOUDFLARE_AI_URL', 'https://example.workers.dev')
+    mockJson({ response: '- Worked on billing module.' })
+
+    await expect(translateToEnglish('ทำ billing module')).resolves.toBe('- Worked on billing module.')
+    expect(fetch).toHaveBeenCalledWith('https://example.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: 'translate', text: 'ทำ billing module' }),
+    })
+  })
+
+  it('throws when the response has no usable field', async () => {
+    vi.stubEnv('VITE_CLOUDFLARE_AI_URL', 'https://example.workers.dev')
+    mockJson({})
+
+    await expect(translateToEnglish('x')).rejects.toThrow(
+      'Cloudflare AI returned an empty translation.',
+    )
   })
 })

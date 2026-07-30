@@ -7031,7 +7031,7 @@ dependencies = [
 
 [[package]]
 name = "timesh1t"
-version = "4.17.0"
+version = "4.18.0"
 dependencies = [
  "harper-core",
  "serde",
@@ -7044,6 +7044,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-process",
  "tauri-plugin-updater",
+ "webkit2gtk",
 ]
 
 [[package]]

@@ -1,5 +1,6 @@
 const MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8'
 const EMBED_MODEL = '@cf/baai/bge-m3' // 1024-dim, multilingual (Thai + English)
+const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo'
 
 const CHAT_SYSTEM_PROMPT = `You answer questions about a user's past work using ONLY the timesheet entries provided.
 If the entries do not contain the answer, say you do not have that information. Be concise.`
@@ -33,6 +34,25 @@ Example output:
 - Conduct SIT tests with HISRCC/cont.
 - Capture results of HISRCC SIT test cases.
 - Produce SIT negative (FAIL) test cases for HISCUH/HISRCC clients.
+`
+
+const TRANSLATE_SYSTEM_PROMPT = `You convert a Thai (or mixed Thai/English) timesheet entry into concise English.
+Rules:
+- Do NOT modify any content inside square brackets, e.g. [IMP], [PersonelCost]. Keep every tag exactly as-is, even if misspelled. A line of tags stays verbatim on its own line.
+- Every non-tag line becomes one English bullet starting with "- ". Strip any leading numbering ("1", "2.", "-") first.
+- Translate concisely in timesheet style: short imperative phrases. Keep acronyms, technical terms, and product names as-is (DDL, SIT, DB, API).
+- NEVER add information that is not in the input. No invented dates, names, or details.
+- If a line is already English, keep it (still as a "- " bullet).
+- Return ONLY the converted text. No explanation, no preamble.
+
+Example input:
+[IMP][PersonelCost]
+1 ทำการทดสอบฐานข้อมูล
+2 วางแผนทำ DDL
+Example output:
+[IMP][PersonelCost]
+- Test database
+- Plan DDL
 `
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -109,6 +129,10 @@ interface AiBinding {
     input: { messages: Array<{ role: 'system' | 'user'; content: string }> },
   ): Promise<{ response?: string }>
   run(model: string, input: { text: string[] }): Promise<{ data: number[][] }>
+  run(
+    model: string,
+    input: { audio: string; task?: string; language?: string },
+  ): Promise<{ text?: string }>
 }
 
 interface Env {
@@ -138,7 +162,15 @@ export default {
       return json({ error: 'Method not allowed.' }, 405)
     }
 
-    let body: { task?: unknown; description?: unknown; text?: unknown; question?: unknown; context?: unknown }
+    let body: {
+      task?: unknown
+      description?: unknown
+      text?: unknown
+      question?: unknown
+      context?: unknown
+      audio?: unknown
+      language?: unknown
+    }
 
     try {
       body = await request.json()
@@ -157,6 +189,42 @@ export default {
         const embedding = result.data?.[0]
         if (!embedding?.length) return json({ error: 'Cloudflare AI returned an empty embedding.' }, 502)
         return json({ embedding })
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'unknown error'
+        return json({ error: `Cloudflare AI request failed: ${reason}` }, 502)
+      }
+    }
+
+    // --- transcribe: { task: 'transcribe', audio, language? } -> { text } ---
+    if (task === 'transcribe') {
+      const audio = typeof body.audio === 'string' ? body.audio : ''
+      const language = typeof body.language === 'string' ? body.language : 'th'
+      if (!audio) return json({ error: 'Audio is required.' }, 400)
+      try {
+        const result = await env.AI.run(WHISPER_MODEL, { audio, task: 'transcribe', language })
+        const text = result.text?.trim()
+        if (!text) return json({ error: 'Cloudflare AI returned an empty transcription.' }, 502)
+        return json({ text })
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'unknown error'
+        return json({ error: `Cloudflare AI request failed: ${reason}` }, 502)
+      }
+    }
+
+    // --- translate: { task: 'translate', text } -> { response } (Thai -> English) ---
+    if (task === 'translate') {
+      const text = typeof body.text === 'string' ? body.text.trim() : ''
+      if (!text) return json({ error: 'Text is required.' }, 400)
+      try {
+        const result = await env.AI.run(MODEL, {
+          messages: [
+            { role: 'system', content: TRANSLATE_SYSTEM_PROMPT },
+            { role: 'user', content: text },
+          ],
+        })
+        const out = result.response?.trim()
+        if (!out) return json({ error: 'Cloudflare AI returned an empty translation.' }, 502)
+        return json({ response: dropInventedTags(text, restoreBracketTags(text, out)) })
       } catch (err) {
         const reason = err instanceof Error ? err.message : 'unknown error'
         return json({ error: `Cloudflare AI request failed: ${reason}` }, 502)

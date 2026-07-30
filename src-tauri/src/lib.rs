@@ -1636,6 +1636,26 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
+
+            // WebKitGTK denies getUserMedia (mic) by default unless the app handles
+            // permission-request itself; allow only mic/camera requests, deny the rest.
+            #[cfg(target_os = "linux")]
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.with_webview(|webview| {
+                    use webkit2gtk::{
+                        glib::ObjectExt, PermissionRequestExt, UserMediaPermissionRequest, WebViewExt,
+                    };
+
+                    webview.inner().connect_permission_request(|_, request| {
+                        if request.is::<UserMediaPermissionRequest>() {
+                            request.allow();
+                            return true;
+                        }
+                        false // fall back to default handling (deny) for other permission types
+                    });
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![greet, ask_agent, agent_status, open_appsmith_filler, open_park_window, grammar_check])

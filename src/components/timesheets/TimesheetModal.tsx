@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, fetchPreviousEntryText, type ArchivedMatch } from '../../services/timesheets'
 import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
 import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
+import { startRecording, type Recorder } from '../../lib/recorder'
+import { transcribeAudio, translateToEnglish } from '../../services/cloudflare-ai'
 import type { TimesheetWithProject, Project, TimesheetInput } from '../../types'
 
 interface Props {
@@ -35,6 +37,12 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
   // Lints are kept with the exact text they were computed from — spans are offsets into
   // that text, so applying one against newer text would splice the wrong characters.
   const [linted, setLinted] = useState<{ text: string; lints: GrammarLint[] }>({ text: '', lints: [] })
+  const [recorder, setRecorder] = useState<Recorder | null>(null)
+  const [transcribing, setTranscribing] = useState(false)
+  const [translating, setTranslating] = useState(false)
+  const streamRef = useRef<MediaStream | null>(null)
+  // Ref mirror of `recorder` so the unmount cleanup can reach the live instance.
+  const recorderRef = useRef<Recorder | null>(null)
 
   // Autofill (new entries only): debounce the description, surface similar past entries.
   useEffect(() => {
@@ -63,6 +71,72 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
     }, 400)
     return () => clearTimeout(timer)
   }, [description])
+
+  // Release the mic if the modal closes mid-recording. Stopping the recorder matters on
+  // the ScriptProcessor fallback, where stopping tracks alone leaves the AudioContext running.
+  useEffect(() => {
+    return () => {
+      recorderRef.current?.stop().catch(() => {}) // blob discarded
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+    }
+  }, [])
+
+  async function toggleRecording() {
+    if (recorder) {
+      setRecorder(null)
+      recorderRef.current = null
+      setTranscribing(true)
+      setError(null)
+      try {
+        const blob = await recorder.stop()
+        // The blob is complete — release the mic now instead of after transcription.
+        streamRef.current?.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+        const text = await transcribeAudio(blob)
+        setDescription((prev) => (prev.trim() ? prev.trimEnd() + '\n' + text : text))
+      } catch (e) {
+        // Reached with the stream still live only if recorder.stop() rejected.
+        streamRef.current?.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+        setError(e instanceof Error ? e.message : 'Transcription failed.')
+      } finally {
+        setTranscribing(false)
+      }
+      return
+    }
+    setError(null)
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Microphone recording is not supported in this browser.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      try {
+        const rec = startRecording(stream)
+        recorderRef.current = rec
+        setRecorder(rec)
+      } catch (e) {
+        stream.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+        setError(e instanceof Error ? e.message : 'Could not start recording.')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not access the microphone.')
+    }
+  }
+
+  async function handleTranslate() {
+    setTranslating(true)
+    setError(null)
+    try {
+      setDescription(await translateToEnglish(description))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Translation failed.')
+    } finally {
+      setTranslating(false)
+    }
+  }
 
   async function usePreviousEntry() {
     setLoadingPrevious(true)
@@ -185,17 +259,37 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
           <div class="fieldset mb-3">
             <div class="flex items-center justify-between gap-2">
               <label class="label" for="description">Description</label>
-              {!timesheet && (
+              <div class="flex items-center gap-1">
+                {!timesheet && (
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-xs"
+                    disabled={loadingPrevious}
+                    onClick={usePreviousEntry}
+                  >
+                    {loadingPrevious && <span class="loading loading-spinner loading-xs" />}
+                    Same as previous
+                  </button>
+                )}
+                <button
+                  type="button"
+                  class={`btn btn-ghost btn-xs ${recorder ? 'text-error animate-pulse' : ''}`}
+                  disabled={transcribing}
+                  onClick={toggleRecording}
+                >
+                  {transcribing && <span class="loading loading-spinner loading-xs" />}
+                  🎤 {recorder ? 'Stop' : 'Record'}
+                </button>
                 <button
                   type="button"
                   class="btn btn-ghost btn-xs"
-                  disabled={loadingPrevious}
-                  onClick={usePreviousEntry}
+                  disabled={translating || transcribing || !description.trim()}
+                  onClick={handleTranslate}
                 >
-                  {loadingPrevious && <span class="loading loading-spinner loading-xs" />}
-                  Same as previous
+                  {translating && <span class="loading loading-spinner loading-xs" />}
+                  → EN
                 </button>
-              )}
+              </div>
             </div>
             {/* Grows with the text (native field-sizing) instead of standing tall and making
                 the whole modal scroll. rows is the fallback where field-sizing is unsupported. */}

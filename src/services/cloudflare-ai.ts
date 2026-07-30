@@ -3,6 +3,7 @@ type CloudflareAiResponse = {
   output?: unknown
   response?: unknown
   embedding?: unknown
+  text?: unknown
   error?: unknown
   result?: {
     summary?: unknown
@@ -79,6 +80,35 @@ export async function embedText(text: string): Promise<number[]> {
   }
 
   return embedding as number[]
+}
+
+// Whisper transcription of a short dictation clip (webm/opus or wav).
+export async function transcribeAudio(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000)) // chunked: avoids arg-length limits
+  }
+  const body = await callWorker({ task: 'transcribe', audio: btoa(binary) })
+  const text = getMessage(body.text) || getMessage(body.response)
+
+  if (!text) {
+    throw new Error('Cloudflare AI returned an empty transcription.')
+  }
+
+  return text
+}
+
+// Convert a Thai/mixed description to the English "- " bullet timesheet style.
+export async function translateToEnglish(text: string): Promise<string> {
+  const body = await callWorker({ task: 'translate', text })
+  const out = getMessage(body.response) || getMessage(body.summary) || getMessage(body.output)
+
+  if (!out) {
+    throw new Error('Cloudflare AI returned an empty translation.')
+  }
+
+  return out
 }
 
 // Answer a question from retrieved timesheet entries (the LLM half of RAG).
