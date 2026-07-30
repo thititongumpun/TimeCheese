@@ -45,14 +45,19 @@ Rules:
 - If a line is already English, keep it (still as a "- " bullet).
 - Return ONLY the converted text. No explanation, no preamble.
 
-Example input:
-[IMP][PersonelCost]
+Example input (the usual case — task lines only, the user adds tags themselves):
 1 ทำการทดสอบฐานข้อมูล
 2 วางแผนทำ DDL
 Example output:
-[IMP][PersonelCost]
 - Test database
 - Plan DDL
+
+Example input (tags present — keep them):
+[IMP][PersonelCost]
+1 ทำการทดสอบฐานข้อมูล
+Example output:
+[IMP][PersonelCost]
+- Test database
 `
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
