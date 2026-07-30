@@ -3,6 +3,23 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.18.0] - 2026-07-30
+
+### Added
+
+- **Dictate an entry in Thai.** A 🎤 button in the entry form records from the
+  microphone and turns the speech into text in the description box (Whisper on
+  the app's existing Cloudflare Worker — free tier covers hundreds of clips a
+  day). Works in the desktop webview on every platform: where the webview has
+  no native audio recorder (Linux/WSL), a built-in WAV recorder steps in, and
+  the Linux webview now actually grants microphone access instead of silently
+  refusing it. macOS builds ask for the mic with a proper permission prompt.
+- **One click turns Thai into timesheet English.** The → EN button next to the
+  recorder converts the description — dictated or typed — into concise English
+  "- " bullets. Tag headers like `[IMP][PersonelCost]` are kept exactly as
+  written (even misspelled ones), tags the model invents are dropped, and if
+  the conversion fails the text is left untouched.
+
 ## [4.17.0] - 2026-07-27
 
 ### Added
