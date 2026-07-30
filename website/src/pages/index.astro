@@ -20,6 +20,18 @@ const specRows = [
     pro: true,
   },
   {
+    name: 'Thai voice dictation',
+    desc: 'A 🎤 button in the entry form records from the microphone and Whisper turns the speech into text in the description box. Works in the desktop webview on every platform — a built-in WAV recorder steps in where the webview has no native audio recorder.',
+    free: true,
+    pro: true,
+  },
+  {
+    name: 'Thai → English conversion',
+    desc: 'The → EN button converts the description — dictated or typed — into concise English "- " bullets. Tag headers like [IMP][PersonelCost] are kept exactly as written; if the conversion fails the text is left untouched.',
+    free: true,
+    pro: true,
+  },
+  {
     name: 'Projects',
     desc: 'Manage active projects and assign entries.',
     free: true,
@@ -142,6 +154,13 @@ const specRows = [
       description from your last entry, and an on-device grammar check flags spelling and
       grammar problems as you type — no key, no network. It runs again before save, so the
       stored description is fixed too.
+    </p>
+    <p class="mt-4 text-muted max-w-xl">
+      Or don't type at all. The 🎤 button records Thai speech straight into the description —
+      Whisper transcribes it on the app's own Cloudflare Worker, in the desktop webview on every
+      platform. Then one click on → EN turns the Thai, dictated or typed, into concise English
+      “- ” bullets — tag headers like [IMP][PersonelCost] are kept exactly as you wrote them, and
+      if the conversion fails your text is left untouched.
     </p>
   </section>
 
