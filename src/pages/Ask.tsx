@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import { searchArchived, fetchEntriesInRange, type ArchivedMatch } from '../services/timesheets'
 import { chatOverContext } from '../services/cloudflare-ai'
 import { parseDateRange } from '../lib/daterange'
+import { formatDate } from '../lib/formatDate'
 import { ExpandableText } from '../components/ExpandableText'
 
 const EXAMPLE_QUESTION = 'What did I work on last week?'
@@ -109,7 +110,7 @@ export function Ask() {
           <ul class="space-y-3">
             {sources.map((s) => (
               <li key={s.id} class="text-sm">
-                <span class="opacity-50 mr-2 font-mono">{new Date(s.date_memo).toLocaleDateString()}</span>
+                <span class="opacity-50 mr-2 font-mono">{formatDate(s.date_memo)}</span>
                 <ExpandableText text={s.description} clampClass="line-clamp-2" />
               </li>
             ))}

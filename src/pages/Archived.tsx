@@ -7,6 +7,7 @@ import { ExpandableText } from '../components/ExpandableText'
 import type { TimesheetWithProject } from '../types'
 import { sortByDate, type SortDir } from '../lib/sortDate'
 import { tidySummary } from '../lib/summaryText'
+import { formatDate } from '../lib/formatDate'
 
 const isTauri = '__TAURI_INTERNALS__' in window
 
@@ -143,7 +144,7 @@ export function Archived() {
     setError(null)
     const XLSX = await import('xlsx')
     const sheet = XLSX.utils.json_to_sheet(rows.map((t) => ({
-      Date: new Date(t.date_memo).toLocaleDateString(),
+      Date: formatDate(t.date_memo),
       Start: t.start_time?.slice(0, 5) ?? '', // "09:00:00" -> "09:00"; null on pre-v4.1.0 rows
       End: t.end_time?.slice(0, 5) ?? '',
       Description: t.description,
@@ -199,7 +200,7 @@ export function Archived() {
         <div>
           <h1 class="font-display text-2xl font-bold">Archived</h1>
           <p class="mt-1 font-mono text-sm opacity-60">
-            {new Date(from).toLocaleDateString()} – {new Date(to).toLocaleDateString()} · {filteredRows.length} entries
+            {formatDate(from)} – {formatDate(to)} · {filteredRows.length} entries
           </p>
         </div>
         <div class="flex flex-wrap items-end gap-2">
@@ -293,7 +294,7 @@ export function Archived() {
               <tbody>
                 {results.map((r) => (
                   <tr key={r.id} class="hover:bg-base-200 transition-colors">
-                    <td class="whitespace-nowrap font-mono">{new Date(r.date_memo).toLocaleDateString()}</td>
+                    <td class="whitespace-nowrap font-mono">{formatDate(r.date_memo)}</td>
                     <td class="max-w-xs"><ExpandableText text={r.description} clampClass="line-clamp-2" /></td>
                     <td class="min-w-64 max-w-md">
                       {r.ai_summary ? (
@@ -340,7 +341,7 @@ export function Archived() {
                 {visible.map((t) => (
                   <tr key={t.id} class="hover:bg-base-200 transition-colors">
                     <td class="whitespace-nowrap font-mono">
-                      {new Date(t.date_memo).toLocaleDateString()}
+                      {formatDate(t.date_memo)}
                       {t.start_time && t.end_time && (
                         <div class="text-xs text-base-content/60">
                           {t.start_time.slice(0, 5)}–{t.end_time.slice(0, 5)}

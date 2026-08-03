@@ -222,6 +222,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
             <input
               id="date_memo"
               type="date"
+              lang="en-GB"
               class="input w-full"
               value={dateMemo}
               onInput={(e) => setDateMemo(e.currentTarget.value)}
@@ -234,6 +235,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               <input
                 id="start_time"
                 type="time"
+                lang="en-GB"
                 class="input w-full"
                 value={startTime}
                 onInput={(e) => setStartTime(e.currentTarget.value)}
@@ -245,6 +247,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               <input
                 id="end_time"
                 type="time"
+                lang="en-GB"
                 class="input w-full"
                 value={endTime}
                 onInput={(e) => setEndTime(e.currentTarget.value)}

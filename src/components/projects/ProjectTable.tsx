@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import type { SortDir } from '../../lib/sortDate'
 import type { Project } from '../../types'
+import { formatDate } from '../../lib/formatDate'
 
 interface Props {
   projects: Project[]
@@ -48,7 +49,7 @@ export function ProjectTable({ projects, onEdit, onDelete }: Props) {
                   {p.is_active ? 'Active' : 'Inactive'}
                 </span>
               </td>
-              <td class="font-mono">{new Date(p.inserted_at).toLocaleDateString()}</td>
+              <td class="font-mono">{formatDate(p.inserted_at)}</td>
               <td class="flex gap-1">
                 <button class="btn btn-ghost btn-xs" onClick={() => onEdit(p)}>
                   Edit

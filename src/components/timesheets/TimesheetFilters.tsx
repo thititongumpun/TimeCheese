@@ -14,6 +14,7 @@ export function TimesheetFilters({ filters, projects, onChange }: Props) {
         <input
           id="date_from"
           type="date"
+          lang="en-GB"
           class="input input-sm font-mono"
           value={filters.date_from ?? ''}
           onChange={(e) => onChange({ ...filters, date_from: e.currentTarget.value || null })}
@@ -24,6 +25,7 @@ export function TimesheetFilters({ filters, projects, onChange }: Props) {
         <input
           id="date_to"
           type="date"
+          lang="en-GB"
           class="input input-sm font-mono"
           value={filters.date_to ?? ''}
           onChange={(e) => onChange({ ...filters, date_to: e.currentTarget.value || null })}

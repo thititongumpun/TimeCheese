@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import type { TimesheetWithProject } from '../../types'
 import { ExpandableText } from '../ExpandableText'
 import { sortByDate, type SortDir } from '../../lib/sortDate'
+import { formatDate } from '../../lib/formatDate'
 
 interface Props {
   timesheets: TimesheetWithProject[]
@@ -81,7 +82,7 @@ export function TimesheetTable({
                   />
                 </td>
                 <td class="whitespace-nowrap font-mono">
-                  {new Date(t.date_memo).toLocaleDateString()}
+                  {formatDate(t.date_memo)}
                   {t.start_time && t.end_time && (
                     <div class="text-xs text-base-content/60">
                       {t.start_time.slice(0, 5)}–{t.end_time.slice(0, 5)}
