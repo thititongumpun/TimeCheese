@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, fetchPreviousEntryText, type ArchivedMatch } from '../../services/timesheets'
-import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
+import { validateTimeslot, formatTimeInput, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
 import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
 import { startRecording, type Recorder } from '../../lib/recorder'
 import { transcribeAudio, translateToEnglish } from '../../services/cloudflare-ai'
@@ -234,11 +234,14 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               <label class="label" for="start_time">Start</label>
               <input
                 id="start_time"
-                type="time"
-                lang="en-GB"
+                type="text"
+                inputmode="numeric"
+                pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+                placeholder="09:00"
+                maxlength={5}
                 class="input w-full"
                 value={startTime}
-                onInput={(e) => setStartTime(e.currentTarget.value)}
+                onInput={(e) => setStartTime(formatTimeInput(e.currentTarget.value))}
                 required
               />
             </div>
@@ -246,11 +249,14 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               <label class="label" for="end_time">End</label>
               <input
                 id="end_time"
-                type="time"
-                lang="en-GB"
+                type="text"
+                inputmode="numeric"
+                pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+                placeholder="18:00"
+                maxlength={5}
                 class="input w-full"
                 value={endTime}
-                onInput={(e) => setEndTime(e.currentTarget.value)}
+                onInput={(e) => setEndTime(formatTimeInput(e.currentTarget.value))}
                 required
               />
             </div>
