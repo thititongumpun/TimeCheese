@@ -235,8 +235,6 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
                 id="start_time"
                 type="time"
                 class="input w-full"
-                min={DAY_START}
-                max={DAY_END}
                 value={startTime}
                 onInput={(e) => setStartTime(e.currentTarget.value)}
                 required
@@ -248,8 +246,6 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
                 id="end_time"
                 type="time"
                 class="input w-full"
-                min={DAY_START}
-                max={DAY_END}
                 value={endTime}
                 onInput={(e) => setEndTime(e.currentTarget.value)}
                 required
