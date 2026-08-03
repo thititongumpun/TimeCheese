@@ -3,6 +3,21 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.18.3] - 2026-08-03
+
+### Fixed
+
+- **Start/End time fields still showed 12-hour AM/PM on Windows.** The
+  `lang="en-GB"` override added in 4.18.2 only works in browser engines
+  that honor it (e.g. Firefox); Chromium-based WebView2, used by the
+  Windows build, ignores it and renders the native time picker in the
+  OS locale regardless. The Start/End fields are now plain typed 24-hour
+  `HH:MM` fields (auto-inserting the colon as you type, e.g. `0900` ->
+  `09:00`) instead of the native picker, so the format is guaranteed on
+  every platform. The Date field still uses the native calendar picker
+  by design — its stored value is always correct regardless of the
+  picker's locale display.
+
 ## [4.18.2] - 2026-08-03
 
 ### Fixed
