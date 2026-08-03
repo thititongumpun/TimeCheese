@@ -3,6 +3,20 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.18.1] - 2026-08-03
+
+### Fixed
+
+- **False "must be 6:00 PM or earlier" rejection when adding a new entry.**
+  The entry form's time fields had native browser `min`/`max` constraints
+  that could misfire mid-keystroke in AM/PM locales (typing "11" for an
+  11:00 AM end time could transiently read as 11:00 PM and trip the native
+  max check), blocking valid entries before submit. The app's own
+  09:00–18:00 window check already enforces this correctly with a clear
+  message, so the redundant native constraint was removed. Back-to-back
+  entries on the same day (e.g. 09:00–10:00 alongside an existing
+  10:00–18:00) now save correctly.
+
 ## [4.18.0] - 2026-07-30
 
 ### Added
