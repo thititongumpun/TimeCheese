@@ -3,6 +3,19 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.18.2] - 2026-08-03
+
+### Fixed
+
+- **US-style date/time inputs and displays.** The date and time fields in
+  the entry form and filters rendered in the browser's locale format
+  (MM/DD/YYYY, 12-hour AM/PM), which is easy to misread and made the
+  AM/PM segment on the native time picker error-prone (e.g. typing "11"
+  for 11:00 AM could land on PM instead). These now render as
+  DD/MM/YYYY and 24-hour time. Everywhere a date is shown as text
+  (entry list, archive, chat citations, project list, Excel export) now
+  reads as `DD/MMMM/YYYY`, e.g. `03/August/2026`.
+
 ## [4.18.1] - 2026-08-03
 
 ### Fixed
