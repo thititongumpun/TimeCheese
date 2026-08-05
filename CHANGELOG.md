@@ -3,6 +3,15 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.18.4] - 2026-08-05
+
+### Changed
+
+- **Default date range on Home and Archived widened.** The Home page's
+  From/To filter now defaults to the current month minus 2 through the
+  current month, instead of just the current month. The Archived page's
+  start month picker defaults the same two months back.
+
 ## [4.18.3] - 2026-08-03
 
 ### Fixed
