@@ -23,6 +23,12 @@ function currentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
+function monthsAgo(n: number): string {
+  const now = new Date()
+  const d = new Date(now.getFullYear(), now.getMonth() - n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 // Cutoff billing period: a month M covers the 26th of M-1 through the 25th of M.
 // A start..end month range therefore spans 26th-before-start through 25th-of-end.
 export function periodRange(startMonth: string, endMonth: string): { from: string; to: string } {
@@ -51,7 +57,7 @@ export function filterByProject(rows: TimesheetWithProject[], projectFilter: str
 
 export function Archived() {
   const [rows, setRows] = useState<TimesheetWithProject[]>([])
-  const [startMonth, setStartMonth] = useState(currentMonth())
+  const [startMonth, setStartMonth] = useState(monthsAgo(2))
   const [endMonth, setEndMonth] = useState(currentMonth())
   const [page, setPage] = useState(0)
   const [projectFilter, setProjectFilter] = useState('')
