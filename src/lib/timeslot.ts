@@ -8,16 +8,6 @@ const MAX_WORKED_MINUTES = 8 * 60
 
 export type Slot = { start_time: string; end_time: string }
 
-// Auto-inserts the colon as digits are typed into a plain-text 24h time
-// field, e.g. "0900" -> "09:00" — keeps typing fast without a native
-// <input type="time"> picker, whose AM/PM chrome follows OS locale and
-// can't be forced to 24h across browser engines.
-export function formatTimeInput(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 4)
-  if (digits.length <= 2) return digits
-  return `${digits.slice(0, 2)}:${digits.slice(2)}`
-}
-
 // "HH:MM" or "HH:MM:SS" (Postgres time comes back with seconds)
 export function toMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number)

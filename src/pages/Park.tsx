@@ -204,7 +204,6 @@ export function Park() {
             </fieldset>
 
             <div class="card-actions">
-              <div class="aura aura-dual w-full">
               <button
                 class="btn btn-primary btn-block"
                 onClick={sendToMsync}
@@ -213,7 +212,6 @@ export function Park() {
                 {sending && <span class="loading loading-spinner loading-xs" />}
                 Send to Msync
               </button>
-              </div>
             </div>
             <p class="text-xs opacity-60 text-center">
               {selected

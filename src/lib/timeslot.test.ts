@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateTimeslot, workedMinutes, formatTimeInput } from './timeslot'
+import { validateTimeslot, workedMinutes } from './timeslot'
 
 describe('timeslot rules', () => {
   it('excludes lunch from worked minutes', () => {
@@ -27,20 +27,3 @@ describe('timeslot rules', () => {
   })
 })
 
-describe('formatTimeInput', () => {
-  it('inserts a colon after 2 digits', () => {
-    expect(formatTimeInput('0900')).toBe('09:00')
-    expect(formatTimeInput('9')).toBe('9')
-    expect(formatTimeInput('09')).toBe('09')
-    expect(formatTimeInput('090')).toBe('09:0')
-  })
-
-  it('strips non-digit characters typed by accident', () => {
-    expect(formatTimeInput('09:00')).toBe('09:00')
-    expect(formatTimeInput('09a00')).toBe('09:00')
-  })
-
-  it('caps at 4 digits (HHMM)', () => {
-    expect(formatTimeInput('090099999')).toBe('09:00')
-  })
-})

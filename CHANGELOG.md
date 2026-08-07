@@ -3,6 +3,32 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.20.0] - 2026-08-07
+
+### Changed
+
+- **Start/End are now a real time picker.** Both fields in the entry modal use
+  the `<daisy-time-picker>` custom element ([daisyui-timepicker]) instead of a
+  masked text input: a dropdown with hour and minute columns, pinned to 24-hour
+  format, bounded to the 09:00–18:00 working window, and stepping in 30-minute
+  increments. Native `<input type="time">` stays off the table — its AM/PM
+  chrome follows the OS locale and can't be forced to 24h across the three
+  Tauri webviews. Tailwind does not scan `node_modules`, so `src/index.css`
+  carries an `@source` line for the package's `dist` — without it the picker
+  renders as unstyled stacked text with no error anywhere.
+- Aura glow removed from the Park page's Send to Msync button; the Home page
+  keeps it as the single marked action that leaves the app.
+
+### Removed
+
+- `formatTimeInput` (the colon-inserting mask in `src/lib/timeslot.ts`) and its
+  tests — the picker handles its own input masking.
+
+Existing rows with off-grid times (e.g. `09:15`, written before 4.20.0) will
+report a step mismatch when reopened for editing.
+
+[daisyui-timepicker]: https://github.com/thititongumpun/daisyui-timepicker
+
 ## [4.19.1] - 2026-08-07
 
 ### Changed

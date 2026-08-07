@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, fetchPreviousEntryText, type ArchivedMatch } from '../../services/timesheets'
-import { validateTimeslot, formatTimeInput, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
+import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
 import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
 import { startRecording, type Recorder } from '../../lib/recorder'
 import { transcribeAudio, translateToEnglish } from '../../services/cloudflare-ai'
 import { DatePicker } from '../DatePicker'
+import 'daisyui-timepicker'
+import 'daisyui-timepicker/preact' // JSX types only, no runtime
 import type { TimesheetWithProject, Project, TimesheetInput } from '../../types'
 
 interface Props {
@@ -225,31 +227,29 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div class="fieldset">
               <label class="label" for="start_time">Start</label>
-              <input
+              <daisy-time-picker
                 id="start_time"
-                type="text"
-                inputmode="numeric"
-                pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-                placeholder="09:00"
-                maxlength={5}
-                class="input w-full"
+                label="Start"
+                hour-cycle="24"
+                min={DAY_START}
+                max={DAY_END}
+                step={1800}
                 value={startTime}
-                onInput={(e) => setStartTime(formatTimeInput(e.currentTarget.value))}
+                onChange={(e) => setStartTime(e.currentTarget.value)}
                 required
               />
             </div>
             <div class="fieldset">
               <label class="label" for="end_time">End</label>
-              <input
+              <daisy-time-picker
                 id="end_time"
-                type="text"
-                inputmode="numeric"
-                pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-                placeholder="18:00"
-                maxlength={5}
-                class="input w-full"
+                label="End"
+                hour-cycle="24"
+                min={DAY_START}
+                max={DAY_END}
+                step={1800}
                 value={endTime}
-                onInput={(e) => setEndTime(formatTimeInput(e.currentTarget.value))}
+                onChange={(e) => setEndTime(e.currentTarget.value)}
                 required
               />
             </div>

@@ -1,6 +1,8 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench family · design-system: design.md · designed-as-app */
 @import '@fontsource-variable/bricolage-grotesque';
 @import "tailwindcss";
+/* Tailwind skips node_modules — without this the time picker renders unstyled. */
+@source "../node_modules/daisyui-timepicker/dist";
 
 @theme {
   --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, sans-serif;
