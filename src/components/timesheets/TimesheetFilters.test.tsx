@@ -35,10 +35,11 @@ describe('TimesheetFilters', () => {
     expect(onChange).toHaveBeenCalledWith({ ...filters, status: 'complete' })
   })
 
-  it('calls onChange with updated date_from when date input changes', () => {
+  it('calls onChange with updated date_from when the calendar picker fires a change', () => {
     const onChange = vi.fn()
-    render(<TimesheetFilters filters={filters} projects={[]} onChange={onChange} />)
-    fireEvent.change(screen.getByLabelText(/from/i), { target: { value: '2026-05-01' } })
+    const { container } = render(<TimesheetFilters filters={filters} projects={[]} onChange={onChange} />)
+    const calendarDate = container.querySelector('#date_from + div calendar-date')!
+    fireEvent.change(calendarDate, { target: { value: '2026-05-01' } })
     expect(onChange).toHaveBeenCalledWith({ ...filters, date_from: '2026-05-01' })
   })
 })

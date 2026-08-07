@@ -4,6 +4,7 @@ import { validateTimeslot, formatTimeInput, DAY_START, DAY_END, type Slot } from
 import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
 import { startRecording, type Recorder } from '../../lib/recorder'
 import { transcribeAudio, translateToEnglish } from '../../services/cloudflare-ai'
+import { DatePicker } from '../DatePicker'
 import type { TimesheetWithProject, Project, TimesheetInput } from '../../types'
 
 interface Props {
@@ -219,15 +220,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
           )}
           <div class="fieldset mb-3">
             <label class="label" for="date_memo">Date</label>
-            <input
-              id="date_memo"
-              type="date"
-              lang="en-GB"
-              class="input w-full"
-              value={dateMemo}
-              onInput={(e) => setDateMemo(e.currentTarget.value)}
-              required
-            />
+            <DatePicker id="date_memo" value={dateMemo} onChange={setDateMemo} triggerClass="btn-block justify-start font-normal" />
           </div>
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div class="fieldset">
@@ -396,6 +389,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
             <button type="button" class="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
+            <div class="aura aura-dual">
             <button
               type="submit"
               class="btn btn-primary"
@@ -404,6 +398,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               {loading && <span class="loading loading-spinner loading-xs mr-2" />}
               {timesheet ? 'Save' : 'Create'}
             </button>
+            </div>
           </div>
         </form>
       </div>

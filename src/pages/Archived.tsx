@@ -254,9 +254,11 @@ export function Archived() {
               ))}
             </select>
           </label>
-          <button class="btn btn-primary btn-sm" disabled={exporting || rows.length === 0} onClick={handleExport}>
-            {exporting ? <span class="loading loading-spinner loading-xs" /> : 'Export XLSX'}
-          </button>
+          <div class="aura aura-dual">
+            <button class="btn btn-primary btn-sm" disabled={exporting || rows.length === 0} onClick={handleExport}>
+              {exporting ? <span class="loading loading-spinner loading-xs" /> : 'Export XLSX'}
+            </button>
+          </div>
         </div>
       </header>
       <form onSubmit={handleSearch} class="mb-4 flex flex-wrap items-center gap-2">

@@ -1,3 +1,4 @@
+import { DatePicker } from '../DatePicker'
 import type { TimesheetFilters, Project } from '../../types'
 
 interface Props {
@@ -11,24 +12,22 @@ export function TimesheetFilters({ filters, projects, onChange }: Props) {
     <div class="flex flex-wrap gap-4 mb-4 items-end">
       <div class="fieldset">
         <label class="label" for="date_from">From</label>
-        <input
+        <DatePicker
           id="date_from"
-          type="date"
-          lang="en-GB"
-          class="input input-sm font-mono"
           value={filters.date_from ?? ''}
-          onChange={(e) => onChange({ ...filters, date_from: e.currentTarget.value || null })}
+          onChange={(value) => onChange({ ...filters, date_from: value || null })}
+          triggerClass="btn-sm font-mono font-normal"
+          placeholder="Any"
         />
       </div>
       <div class="fieldset">
         <label class="label" for="date_to">To</label>
-        <input
+        <DatePicker
           id="date_to"
-          type="date"
-          lang="en-GB"
-          class="input input-sm font-mono"
           value={filters.date_to ?? ''}
-          onChange={(e) => onChange({ ...filters, date_to: e.currentTarget.value || null })}
+          onChange={(value) => onChange({ ...filters, date_to: value || null })}
+          triggerClass="btn-sm font-mono font-normal"
+          placeholder="Any"
         />
       </div>
       <div class="fieldset">

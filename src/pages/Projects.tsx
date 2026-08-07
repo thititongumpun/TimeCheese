@@ -48,9 +48,11 @@ export function Projects() {
           <h1 class="font-display font-bold text-2xl">Projects</h1>
           <p class="text-sm opacity-60 font-mono">{projects.length} project{projects.length === 1 ? '' : 's'}</p>
         </div>
-        <button class="btn btn-primary" onClick={() => setModalOpen(true)}>
-          New project
-        </button>
+        <div class="aura aura-dual">
+          <button class="btn btn-primary" onClick={() => setModalOpen(true)}>
+            New project
+          </button>
+        </div>
       </header>
       {error && (
         <div class="alert alert-error mb-4">

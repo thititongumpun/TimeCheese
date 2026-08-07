@@ -98,10 +98,12 @@ export function Login() {
                   required
                 />
               </div>
-              <button type="submit" class="btn btn-primary w-full" disabled={loading}>
-                {loading && <span class="loading loading-spinner loading-xs mr-2" />}
-                Sign in
-              </button>
+              <div class="aura aura-dual w-full">
+                <button type="submit" class="btn btn-primary w-full" disabled={loading}>
+                  {loading && <span class="loading loading-spinner loading-xs mr-2" />}
+                  Sign in
+                </button>
+              </div>
               <div class="divider my-2 text-xs opacity-50">or</div>
               <button
                 type="button"
@@ -158,10 +160,12 @@ export function Login() {
                 </>
               )}
 
-              <button type="submit" class="btn btn-primary w-full" disabled={loading}>
-                {loading && <span class="loading loading-spinner loading-xs mr-2" />}
-                {codeSent ? 'Set password & sign in' : 'Send me a code'}
-              </button>
+              <div class="aura aura-dual w-full">
+                <button type="submit" class="btn btn-primary w-full" disabled={loading}>
+                  {loading && <span class="loading loading-spinner loading-xs mr-2" />}
+                  {codeSent ? 'Set password & sign in' : 'Send me a code'}
+                </button>
+              </div>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm w-full mt-2 normal-case"

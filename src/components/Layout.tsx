@@ -46,13 +46,15 @@ export function Layout({ children }: LayoutProps) {
             © {new Date().getFullYear()} TimeCheese · v{packageJson.version}
           </footer>
           {showTop && (
-            <button
-              class="btn btn-circle btn-primary fixed bottom-20 right-6 z-30 shadow-lg"
-              aria-label="Scroll to top"
-              onClick={() => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              ↑
-            </button>
+            <div class="aura aura-dual fixed bottom-20 right-6 z-30">
+              <button
+                class="btn btn-circle btn-primary shadow-lg"
+                aria-label="Scroll to top"
+                onClick={() => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                ↑
+              </button>
+            </div>
           )}
         </main>
       </div>
