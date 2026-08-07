@@ -12,9 +12,6 @@ jobs:
 
     strategy:
       fail-fast: false
-      # latest.json is a single shared release asset merged in by each platform's
-      # tauri-action run; parallel jobs race to update it and 404. Serialize.
-      max-parallel: 1
       matrix:
         include:
           - platform: windows-latest
