@@ -3,6 +3,20 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.19.0] - 2026-08-07
+
+### Added
+
+- **Primary buttons now use the DaisyUI Aura dual-glow effect.** Every
+  primary action button (Save, Create, Sign in, New entry, etc.) is wrapped
+  in the `aura-dual` glow for a more consistent, prominent call-to-action
+  affordance across the app.
+- **Date pickers replaced with a Cally-based calendar.** The date fields on
+  the timesheet entry form and the Home/Archived filters now use a shared
+  `DatePicker` component (built on DaisyUI's Cally calendar) instead of the
+  native browser date input, for a more consistent look across platforms.
+  Month-granular pickers (Archived's start month) remain native.
+
 ## [4.18.4] - 2026-08-05
 
 ### Changed
