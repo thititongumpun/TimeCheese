@@ -197,9 +197,7 @@ export function JiraAssistant() {
             <p class="text-sm opacity-70">
               Already have one? Pick it under <span class="font-medium">Settings → Jira agent</span>.
             </p>
-            <div class="aura aura-dual mt-2 w-fit">
-              <button class="btn btn-primary btn-sm" onClick={checkStatus}>Re-check</button>
-            </div>
+            <button class="btn btn-primary btn-sm mt-2 w-fit" onClick={checkStatus}>Re-check</button>
           </div>
         </div>
       )}
@@ -221,9 +219,7 @@ export function JiraAssistant() {
               </li>
               <li>Run <code class="rounded bg-base-300 px-1">{setup.login}</code> in a terminal and log in</li>
             </ol>
-            <div class="aura aura-dual mt-2 w-fit">
-              <button class="btn btn-primary btn-sm" onClick={checkStatus}>Re-check</button>
-            </div>
+            <button class="btn btn-primary btn-sm mt-2 w-fit" onClick={checkStatus}>Re-check</button>
 
             <details class="mt-2 text-sm">
               <summary class="cursor-pointer opacity-70">Already installed but this keeps showing?</summary>
@@ -273,9 +269,7 @@ export function JiraAssistant() {
                 <span class="font-medium">Settings → Jira agent</span>.
               </p>
             )}
-            <div class="aura aura-dual mt-2 w-fit">
-              <button class="btn btn-primary btn-sm" onClick={checkStatus}>Re-check</button>
-            </div>
+            <button class="btn btn-primary btn-sm mt-2 w-fit" onClick={checkStatus}>Re-check</button>
           </div>
         </div>
       )}
@@ -331,11 +325,9 @@ export function JiraAssistant() {
               onInput={(e) => setPrompt(e.currentTarget.value)}
             />
             <div class="flex gap-2">
-              <div class="aura aura-dual w-fit">
-              <button type="submit" class="btn btn-primary" disabled={loading || !prompt.trim()}>
+              <button type="submit" class="btn btn-primary w-fit" disabled={loading || !prompt.trim()}>
                 {loading ? <span class="loading loading-spinner loading-xs" /> : 'Run'}
               </button>
-              </div>
               <button
                 type="button"
                 class="btn btn-outline w-fit"

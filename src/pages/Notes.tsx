@@ -56,11 +56,9 @@ export function Notes() {
           value={text}
           onInput={(e) => setText(e.currentTarget.value)}
         />
-        <div class="aura aura-dual self-end">
-          <button type="submit" class="btn btn-primary" disabled={!text.trim()}>
-            Add
-          </button>
-        </div>
+        <button type="submit" class="btn btn-primary self-end" disabled={!text.trim()}>
+          Add
+        </button>
       </form>
 
       {notes.length === 0 ? (

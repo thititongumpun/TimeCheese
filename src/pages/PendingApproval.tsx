@@ -33,12 +33,10 @@ export function PendingApproval() {
             </div>
           )}
 
-          <div class="aura aura-dual w-full">
-            <button type="button" class="btn btn-primary w-full" onClick={checkAgain} disabled={checking}>
-              {checking && <span class="loading loading-spinner loading-xs mr-2" />}
-              Check again
-            </button>
-          </div>
+          <button type="button" class="btn btn-primary w-full" onClick={checkAgain} disabled={checking}>
+            {checking && <span class="loading loading-spinner loading-xs mr-2" />}
+            Check again
+          </button>
           <button
             type="button"
             class="btn btn-ghost btn-sm w-full mt-2 normal-case"

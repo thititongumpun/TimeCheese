@@ -486,11 +486,9 @@ export function Home() {
             {timesheets.length} {timesheets.length === 1 ? 'entry' : 'entries'} · {monthLabel}
           </p>
         </div>
-        <div class="aura aura-dual">
-          <button class="btn btn-primary" onClick={() => setModalOpen(true)}>
-            New entry
-          </button>
-        </div>
+        <button class="btn btn-primary" onClick={() => setModalOpen(true)}>
+          New entry
+        </button>
       </header>
       {error && (
         <div class="alert alert-error mb-4">

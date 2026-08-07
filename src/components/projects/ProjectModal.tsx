@@ -88,7 +88,6 @@ export function ProjectModal({ project, onClose }: Props) {
             <button type="button" class="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <div class="aura aura-dual">
             <button
               type="submit"
               class="btn btn-primary"
@@ -97,7 +96,6 @@ export function ProjectModal({ project, onClose }: Props) {
               {loading && <span class="loading loading-spinner loading-xs mr-2" />}
               {project ? 'Save' : 'Create'}
             </button>
-            </div>
           </div>
         </form>
       </div>

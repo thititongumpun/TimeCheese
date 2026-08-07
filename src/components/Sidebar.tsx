@@ -308,7 +308,6 @@ export function Sidebar() {
 
       {update && (
         <div class="px-3 pb-2">
-          <div class="aura aura-dual w-full">
           <button
             class="btn btn-primary btn-xs w-full justify-start gap-1 normal-case"
             onClick={() => setUpdateModalOpen(true)}
@@ -316,7 +315,6 @@ export function Sidebar() {
             <span class="inline-block h-2 w-2 shrink-0 rounded-full bg-primary-content" />
             <span class="min-w-0 truncate is-drawer-close:hidden">Update v{update.version}</span>
           </button>
-          </div>
         </div>
       )}
       <div class="p-3">
@@ -382,12 +380,10 @@ export function Sidebar() {
                   value={avatarInput}
                   onInput={(e) => setAvatarInput(e.currentTarget.value)}
                 />
-                <div class="aura aura-dual">
                 <button class="btn btn-sm btn-primary" disabled={savingAvatar} onClick={saveAvatar}>
                   {savingAvatar && <span class="loading loading-spinner loading-xs" />}
                   Save
                 </button>
-                </div>
               </div>
               {avatarStatus && <div class="mt-2 text-sm opacity-60" role="status">{avatarStatus}</div>}
             </div>
@@ -417,12 +413,10 @@ export function Sidebar() {
                   value={newPassword}
                   onInput={(e) => setNewPassword(e.currentTarget.value)}
                 />
-                <div class="aura aura-dual">
                 <button class="btn btn-sm btn-primary" disabled={savingPassword} onClick={savePassword}>
                   {savingPassword && <span class="loading loading-spinner loading-xs" />}
                   Save
                 </button>
-                </div>
               </div>
               {passwordStatus && <div class="mt-2 text-sm opacity-60" role="status">{passwordStatus}</div>}
             </div>
@@ -510,16 +504,14 @@ export function Sidebar() {
                 </div>
               )}
               {update && (
-                <div class="aura aura-dual w-full mt-3">
                 <button
-                  class="btn btn-primary btn-sm w-full"
+                  class="btn btn-primary btn-sm w-full mt-3"
                   disabled={installingUpdate}
                   onClick={installUpdate}
                 >
                   {installingUpdate && <span class="loading loading-spinner loading-xs" />}
                   Download and install {update.version}
                 </button>
-                </div>
               )}
             </div>
 
@@ -575,16 +567,14 @@ export function Sidebar() {
               </div>
             )}
 
-            <div class="aura aura-dual w-full mt-4">
             <button
-              class="btn btn-primary btn-sm w-full"
+              class="btn btn-primary btn-sm w-full mt-4"
               disabled={installingUpdate}
               onClick={installUpdate}
             >
               {installingUpdate && <span class="loading loading-spinner loading-xs" />}
               Download and install {update.version}
             </button>
-            </div>
 
             <button
               class="btn btn-ghost btn-sm mt-2 w-full"

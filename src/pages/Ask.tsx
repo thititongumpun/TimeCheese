@@ -76,11 +76,9 @@ export function Ask() {
           value={question}
           onInput={(e) => setQuestion(e.currentTarget.value)}
         />
-        <div class="aura aura-dual">
-          <button type="submit" class="btn btn-primary" disabled={loading || !question.trim()}>
-            {loading ? <span class="loading loading-spinner loading-xs" /> : 'Ask'}
-          </button>
-        </div>
+        <button type="submit" class="btn btn-primary" disabled={loading || !question.trim()}>
+          {loading ? <span class="loading loading-spinner loading-xs" /> : 'Ask'}
+        </button>
       </form>
 
       {error && (

@@ -3,6 +3,22 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.19.1] - 2026-08-07
+
+### Changed
+
+- **Aura glow reserved for Send to Msync.** The `aura-dual` wrapper added in
+  4.19.0 is removed from every other primary button (Save, Create, Sign in,
+  New entry, Re-check, Run, Export, the scroll-to-top FAB, etc.) so the glow
+  marks the one action that leaves the app. Layout classes that lived on the
+  wrapper moved onto the buttons, so spacing and positioning are unchanged.
+
+### Fixed
+
+- **Park no longer flashes its empty state while loading.** The vehicle list
+  fetch now shows a spinner instead of briefly rendering "No vehicles yet",
+  matching the loading treatment on every other page.
+
 ## [4.19.0] - 2026-08-07
 
 ### Added

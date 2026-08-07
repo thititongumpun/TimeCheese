@@ -36,6 +36,7 @@ export function Park() {
   const [newPlate, setNewPlate] = useState('')
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
+  const [loading, setLoading] = useState(true)
   const sendTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // The vehicle sent to Msync: the default one, else the first.
@@ -45,6 +46,7 @@ export function Park() {
     const { data, error } = await fetchVehicles()
     if (error) setError(error.message)
     else setVehicles(data ?? [])
+    setLoading(false)
   }
 
   useEffect(() => { loadVehicles() }, [])
@@ -173,6 +175,8 @@ export function Park() {
                 <div></div>
                 <div></div>
               </div>
+            ) : loading ? (
+              <span class="loading loading-spinner loading-md self-center" />
             ) : (
               <p class="font-mono text-sm opacity-60">No vehicle selected — add one to enable sending.</p>
             )}
@@ -214,7 +218,9 @@ export function Park() {
             <p class="text-xs opacity-60 text-center">
               {selected
                 ? `Submits as ${TYPE_ICON[selected.vehicle_type]} ${selected.license_plate}`
-                : 'Add a vehicle to enable sending.'}
+                : loading
+                  ? ''
+                  : 'Add a vehicle to enable sending.'}
             </p>
           </div>
         </section>
@@ -227,7 +233,9 @@ export function Park() {
               {vehicles.length > 0 && <span class="badge badge-ghost badge-sm">{vehicles.length}</span>}
             </h2>
 
-            {vehicles.length === 0 ? (
+            {loading ? (
+              <span class="loading loading-spinner loading-md self-center" />
+            ) : vehicles.length === 0 ? (
               <p class="font-mono text-sm opacity-60">No vehicles yet — add one below.</p>
             ) : (
               <ul>
