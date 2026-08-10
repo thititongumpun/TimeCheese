@@ -23,7 +23,7 @@ Rules:
 
 Example input:
 1. [INVX] update innovest x cluster
-2. [IMP][PersonnelCost] 
+2. [IMP][PersonnelCost]
 - Conduct SIT tests with HISRCC/ cont.
 - Capture Result HISRCC  SIT test cases.
 - Produce SIT negative (FAIL) test cases HISCUH/HISRCC clients.

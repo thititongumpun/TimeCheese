@@ -4,7 +4,6 @@ import { chatOverContext } from '../services/cloudflare-ai'
 import { parseDateRange } from '../lib/daterange'
 import { formatDate } from '../lib/formatDate'
 import { ExpandableText } from '../components/ExpandableText'
-
 const EXAMPLE_QUESTION = 'What did I work on last week?'
 
 export function Ask() {
@@ -99,7 +98,7 @@ export function Ask() {
       {answer && (
         <div class="card border-2 border-base-300 mb-6">
           <div class="card-body p-4">
-            <p class="whitespace-pre-wrap break-words">{answer}</p>
+            <p class="whitespace-pre-wrap wrap-break-words">{answer}</p>
           </div>
         </div>
       )}
