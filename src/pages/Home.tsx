@@ -9,6 +9,7 @@ import { fetchHolidays } from '../services/holidays'
 import { confirmDialog } from '../lib/confirm'
 import { tidySummary } from '../lib/summaryText'
 import { APPSMITH_URL } from '../lib/appsmith'
+import { prunedRuns } from '../lib/fillLog'
 import { ymd, periodStart, missingWorkdays } from '../lib/missing-days'
 import { isHolidayRow, upcomingHolidays, HOLIDAY_PROJECT_NAME } from '../lib/holiday'
 import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../lib/timeslot'
@@ -28,7 +29,7 @@ type FillRun = {
 }
 
 function readFillLog(): FillRun[] {
-  try { return JSON.parse(localStorage.getItem('appsmith_fill_log') ?? '[]') } catch { return [] }
+  try { return prunedRuns(JSON.parse(localStorage.getItem('appsmith_fill_log') ?? '[]')) } catch { return [] }
 }
 
 // Next occurrence of the 26th at 00:00 local time (this month, or next if already past).

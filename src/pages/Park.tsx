@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { MSYNC_PARK_URL } from '../lib/msync'
+import { prunedRuns } from '../lib/fillLog'
 import { fetchVehicles, createVehicle, deleteVehicle, setDefaultVehicle } from '../services/vehicles'
 import type { Vehicle } from '../types'
 
@@ -23,7 +24,7 @@ const TYPE_ICON: Record<Vehicle['vehicle_type'], string> = {
 type ParkRun = { at: string; cardNo: string }
 
 function readParkLog(): ParkRun[] {
-  try { return JSON.parse(localStorage.getItem('park_fill_log') ?? '[]') } catch { return [] }
+  try { return prunedRuns(JSON.parse(localStorage.getItem('park_fill_log') ?? '[]') as ParkRun[]) } catch { return [] }
 }
 
 export function Park() {

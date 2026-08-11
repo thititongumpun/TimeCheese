@@ -3,6 +3,27 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.21.0] - 2026-08-11
+
+### Changed
+
+- **Fill logs expire after a week.** Runs older than 7 days are dropped from
+  both the Home Msync fill log (`appsmith_fill_log`) and the Park fill log
+  (`park_fill_log`). Pruning happens in the readers, so it runs on every page
+  mount and again on every write — the pruned array is what gets persisted
+  back. No timer: a log that ages past the boundary while the page sits open
+  stays visible until the next mount, which is invisible in practice and buys
+  a much smaller diff. The manual "Clear log" buttons are unchanged, as is the
+  existing 50-run cap. New pure helper `src/lib/fillLog.ts` (`prunedRuns`,
+  `FILL_LOG_MAX_AGE_MS`), unit-tested.
+- `daisyui-timepicker` bumped to `^0.1.1`.
+
+### Fixed
+
+- Long unbroken answers on the Ask page no longer overflow their container —
+  the answer uses Tailwind v4's `wrap-break-words`, and the prompt is trimmed
+  before it is sent.
+
 ## [4.20.0] - 2026-08-07
 
 ### Changed
