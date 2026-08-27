@@ -11,12 +11,15 @@ vi.mock('../../lib/grammar', async (importOriginal) => ({
   checkGrammar: mockCheckGrammar,
 }))
 
-const { mockFetchPrevious } = vi.hoisted(() => ({ mockFetchPrevious: vi.fn() }))
+const { mockFetchPrevious, mockFetchDaySlots } = vi.hoisted(() => ({
+  mockFetchPrevious: vi.fn(),
+  mockFetchDaySlots: vi.fn().mockResolvedValue({ data: [], error: null }),
+}))
 
 vi.mock('../../services/timesheets', () => ({
   createTimesheet: vi.fn(),
   updateTimesheet: vi.fn(),
-  fetchDaySlots: vi.fn().mockResolvedValue({ data: [], error: null }),
+  fetchDaySlots: mockFetchDaySlots,
   searchArchived: vi.fn().mockResolvedValue({ data: [] }),
   fetchPreviousEntryText: mockFetchPrevious,
 }))
@@ -156,5 +159,45 @@ describe('TimesheetModal "→ EN" translation', () => {
 
     await screen.findByText(/cloudflare ai returned an empty translation/i)
     expect(textarea.value).toBe('ทดสอบฐานข้อมูล')
+  })
+})
+
+describe('TimesheetModal time prefill', () => {
+  it('prefills Start/End from the first free gap and shows the hint', async () => {
+    mockCheckGrammar.mockResolvedValue([])
+    mockFetchDaySlots.mockResolvedValueOnce({
+      data: [{ start_time: '09:00:00', end_time: '10:00:00' }],
+      error: null,
+    })
+
+    const { TimesheetModal } = await import('./TimesheetModal')
+    render(<TimesheetModal timesheet={null} projects={[]} onClose={vi.fn()} />)
+
+    await waitFor(() => {
+      expect((document.getElementById('start_time') as any)?.value).toBe('10:00')
+      expect((document.getElementById('end_time') as any)?.value).toBe('18:00')
+    })
+    expect(screen.getByText(/Free today: 10:00–18:00/)).toBeInTheDocument()
+  })
+
+  it('keeps the saved times and hides the hint when editing', async () => {
+    mockCheckGrammar.mockResolvedValue([])
+
+    const { TimesheetModal } = await import('./TimesheetModal')
+    const existing = {
+      id: '2',
+      date_memo: '2026-07-25T00:00:00Z',
+      description: 'Existing work',
+      project_id: null,
+      is_complete: false,
+      ai_summary: null,
+      start_time: '14:00:00',
+      end_time: '15:00:00',
+    } as any
+    render(<TimesheetModal timesheet={existing} projects={[]} onClose={vi.fn()} />)
+
+    expect((document.getElementById('start_time') as any)?.value).toBe('14:00')
+    expect((document.getElementById('end_time') as any)?.value).toBe('15:00')
+    expect(screen.queryByText(/Free today/)).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateTimeslot, workedMinutes } from './timeslot'
+import { validateTimeslot, workedMinutes, freeGaps, remainingWorkedMinutes } from './timeslot'
 
 describe('timeslot rules', () => {
   it('excludes lunch from worked minutes', () => {
@@ -24,6 +24,56 @@ describe('timeslot rules', () => {
   it('rejects overlap with an existing entry', () => {
     expect(validateTimeslot('11:00', '13:00', [{ start_time: '09:00:00', end_time: '12:00:00' }]))
       .toMatch(/Overlaps/)
+  })
+})
+
+describe('freeGaps / remainingWorkedMinutes', () => {
+  it('returns the full day when there are no entries', () => {
+    expect(freeGaps([])).toEqual([{ start_time: '09:00', end_time: '18:00' }])
+  })
+
+  it('handles Postgres "HH:MM:SS" input', () => {
+    expect(freeGaps([{ start_time: '09:00:00', end_time: '10:00:00' }])).toEqual([
+      { start_time: '10:00', end_time: '18:00' },
+    ])
+  })
+
+  it('finds gaps between two entries', () => {
+    const gaps = freeGaps([
+      { start_time: '09:00', end_time: '10:00' },
+      { start_time: '11:00', end_time: '12:00' },
+    ])
+    expect(gaps[0]).toEqual({ start_time: '10:00', end_time: '11:00' })
+    expect(gaps).toContainEqual({ start_time: '12:00', end_time: '18:00' })
+  })
+
+  it('sorts unsorted input chronologically', () => {
+    const gaps = freeGaps([
+      { start_time: '13:00', end_time: '14:00' },
+      { start_time: '09:00', end_time: '10:00' },
+    ])
+    expect(gaps).toEqual([
+      { start_time: '10:00', end_time: '13:00' },
+      { start_time: '14:00', end_time: '18:00' },
+    ])
+  })
+
+  it('merges adjacent/overlapping entries', () => {
+    expect(
+      freeGaps([
+        { start_time: '09:00', end_time: '10:00' },
+        { start_time: '10:00', end_time: '11:00' },
+      ]),
+    ).toEqual([{ start_time: '11:00', end_time: '18:00' }])
+  })
+
+  it('returns no gaps for a fully booked day', () => {
+    expect(freeGaps([{ start_time: '09:00', end_time: '18:00' }])).toEqual([])
+  })
+
+  it('computes remaining worked minutes against the 8h budget', () => {
+    expect(remainingWorkedMinutes([])).toBe(480)
+    expect(remainingWorkedMinutes([{ start_time: '11:00', end_time: '14:00' }])).toBe(360)
   })
 })
 

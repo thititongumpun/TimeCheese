@@ -47,3 +47,33 @@ export function validateTimeslot(start: string, end: string, others: Slot[]): st
   }
   return null
 }
+
+// Inverse of toMinutes.
+function toTime(mins: number): string {
+  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`
+}
+
+// Free stretches of the working day left by `others`, chronological.
+export function freeGaps(others: Slot[]): Slot[] {
+  const lo = toMinutes(DAY_START)
+  const hi = toMinutes(DAY_END)
+  const busy = others
+    .map((o) => [Math.max(lo, toMinutes(o.start_time)), Math.min(hi, toMinutes(o.end_time))] as const)
+    .filter(([s, e]) => s < e)
+    .sort((a, b) => a[0] - b[0])
+
+  const gaps: Slot[] = []
+  let cursor = lo
+  for (const [s, e] of busy) {
+    if (s > cursor) gaps.push({ start_time: toTime(cursor), end_time: toTime(s) })
+    cursor = Math.max(cursor, e)
+  }
+  if (cursor < hi) gaps.push({ start_time: toTime(cursor), end_time: toTime(hi) })
+  return gaps
+}
+
+// Worked minutes still available in the day's 8h budget.
+export function remainingWorkedMinutes(others: Slot[]): number {
+  const used = others.reduce((sum, o) => sum + workedMinutes(o.start_time, o.end_time), 0)
+  return Math.max(0, MAX_WORKED_MINUTES - used)
+}

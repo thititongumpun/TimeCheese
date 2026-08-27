@@ -3,6 +3,22 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.22.0] - 2026-08-27
+
+### Added
+
+- **New entries start in the day's first free slot.** Opening the New Entry
+  modal (or switching its date) fetches that day's rows and prefills Start/End
+  with the first free window inside 09:00–18:00 — with 09:00–10:00 already
+  booked, the pickers land on 10:00–18:00; with 09:00–10:00 and 11:00–12:00
+  booked, on 10:00–11:00. A hint line under the pickers spells out every free
+  window and the worked hours left (`Free today: 10:00–18:00 (7h left, lunch
+  excluded)`), or `Day is full (09:00–18:00).` when nothing is left. Editing an
+  existing entry is untouched: no prefill, no hint. The pickers keep their full
+  09:00–18:00 range — the prefill is a starting point, not a restriction, and
+  save-time validation is unchanged. New pure helpers `freeGaps` and
+  `remainingWorkedMinutes` in `src/lib/timeslot.ts`, unit-tested.
+
 ## [4.21.0] - 2026-08-11
 
 ### Changed

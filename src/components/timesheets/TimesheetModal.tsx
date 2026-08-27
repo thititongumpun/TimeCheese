@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, fetchPreviousEntryText, type ArchivedMatch } from '../../services/timesheets'
-import { validateTimeslot, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
+import { validateTimeslot, freeGaps, remainingWorkedMinutes, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
 import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
 import { startRecording, type Recorder } from '../../lib/recorder'
 import { transcribeAudio, translateToEnglish } from '../../services/cloudflare-ai'
@@ -40,6 +40,9 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
   // Lints are kept with the exact text they were computed from — spans are offsets into
   // that text, so applying one against newer text would splice the wrong characters.
   const [linted, setLinted] = useState<{ text: string; lints: GrammarLint[] }>({ text: '', lints: [] })
+  // Free windows left on the picked date (null = unknown/not loaded, hint hidden).
+  const [gaps, setGaps] = useState<Slot[] | null>(null)
+  const [remaining, setRemaining] = useState(0)
   const [recorder, setRecorder] = useState<Recorder | null>(null)
   const [transcribing, setTranscribing] = useState(false)
   const [translating, setTranslating] = useState(false)
@@ -65,6 +68,37 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
     }, 400)
     return () => clearTimeout(timer)
   }, [description, timesheet])
+
+  // Prefill (new entries only): jump Start/End to the day's first free gap and show what's left.
+  // Advisory only — handleSubmit re-fetches and validates for real.
+  useEffect(() => {
+    if (timesheet) return // editing — keep the saved times
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data, error } = await fetchDaySlots(dateMemo)
+        if (cancelled) return
+        if (error) {
+          setGaps(null)
+          return
+        }
+        const others = (data ?? []).filter((r): r is typeof r & Slot => !!r.start_time && !!r.end_time)
+        const g = freeGaps(others)
+        if (cancelled) return
+        setGaps(g)
+        setRemaining(remainingWorkedMinutes(others))
+        if (g.length > 0) {
+          setStartTime(g[0].start_time)
+          setEndTime(g[0].end_time)
+        }
+      } catch {
+        if (!cancelled) setGaps(null) // offline — submit-time validation still guards
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [dateMemo, timesheet])
 
   // Grammar check (Harper, on-device via Rust). Runs when editing too, unlike the autofill above.
   useEffect(() => {
@@ -254,6 +288,13 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
               />
             </div>
           </div>
+          {!timesheet && gaps && (
+            <p class="text-xs opacity-60 -mt-2 mb-3">
+              {gaps.length > 0
+                ? `Free today: ${gaps.map((g) => `${g.start_time}–${g.end_time}`).join(', ')} (${(remaining / 60).toFixed(1).replace(/\.0$/, '')}h left, lunch excluded)`
+                : `Day is full (${DAY_START}–${DAY_END}).`}
+            </p>
+          )}
           <div class="fieldset mb-3">
             <div class="flex items-center justify-between gap-2">
               <label class="label" for="description">Description</label>
