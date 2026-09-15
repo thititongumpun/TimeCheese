@@ -11,7 +11,7 @@ export function TimesheetFilters({ filters, projects, onChange }: Props) {
   return (
     <div class="flex flex-wrap gap-4 mb-4 items-end">
       <div class="fieldset">
-        <label class="label" for="date_from">From</label>
+        <label class="label" id="date_from-label" for="date_from">From</label>
         <DatePicker
           id="date_from"
           value={filters.date_from ?? ''}
@@ -21,7 +21,7 @@ export function TimesheetFilters({ filters, projects, onChange }: Props) {
         />
       </div>
       <div class="fieldset">
-        <label class="label" for="date_to">To</label>
+        <label class="label" id="date_to-label" for="date_to">To</label>
         <DatePicker
           id="date_to"
           value={filters.date_to ?? ''}

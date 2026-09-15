@@ -3,6 +3,29 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.23.0] - 2026-09-15
+
+### Fixed
+
+- **Date picker opens on macOS.** The picker's dropdown was daisyUI's
+  focus-driven `.dropdown`, whose trigger was a `<button>` — and WebKit
+  (Safari, and so Tauri's WKWebView) does not focus a button on click, so
+  `:focus-within` never matched and the calendar never appeared on macOS. It is
+  now a native `<details>`/`<summary>` disclosure, which needs no focus;
+  picking a day closes it by setting `open = false`. The `closed` state hack
+  that forced `.dropdown-close` is gone. `<summary>` is not a labelable
+  element, so the three call-site labels gained ids and the trigger an
+  `aria-labelledby`, keeping the accessible name intact.
+
+### Added
+
+- **Missing working days are clickable.** Each day listed in the "No entries on
+  N working days" warning is now a button that opens the New Entry modal with
+  that date prefilled, instead of opening on today and making you re-pick the
+  date. `TimesheetModal` takes an optional `defaultDate` (ignored when editing);
+  it is cleared when the modal closes, so the plain New Entry button still
+  opens on today.
+
 ## [4.22.0] - 2026-08-27
 
 ### Added

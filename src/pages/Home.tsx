@@ -82,13 +82,30 @@ function formatMissingDate(key: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-function MissingDaysBanner({ days, onDismiss }: { days: string[]; onDismiss: () => void }) {
+function MissingDaysBanner(
+  { days, onPick, onDismiss }:
+  { days: string[]; onPick: (date: string) => void; onDismiss: () => void },
+) {
   if (days.length === 0) return null
-  const shown = days.slice(0, 6).map(formatMissingDate).join(', ')
+  const shown = days.slice(0, 6)
   const extra = days.length > 6 ? ` and ${days.length - 6} more` : ''
   return (
     <div class="alert alert-warning mb-4">
-      <span>⚠ No entries on {days.length} working day{days.length === 1 ? '' : 's'}: {shown}{extra}</span>
+      <span class="flex flex-wrap items-center gap-1">
+        ⚠ No entries on {days.length} working day{days.length === 1 ? '' : 's'}:
+        {shown.map((key) => (
+          <button
+            key={key}
+            type="button"
+            class="btn btn-ghost btn-xs"
+            onClick={() => onPick(key)}
+            title="Add an entry for this day"
+          >
+            {formatMissingDate(key)}
+          </button>
+        ))}
+        {extra}
+      </span>
       <button class="btn btn-ghost btn-xs" onClick={onDismiss} aria-label="Dismiss">✕</button>
     </div>
   )
@@ -140,6 +157,7 @@ export function Home() {
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTimesheet, setEditingTimesheet] = useState<TimesheetWithProject | null>(null)
+  const [newEntryDate, setNewEntryDate] = useState<string | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -459,6 +477,7 @@ export function Home() {
   function handleModalClose() {
     setModalOpen(false)
     setEditingTimesheet(null)
+    setNewEntryDate(null)
     loadTimesheets()
   }
 
@@ -470,7 +489,15 @@ export function Home() {
     <div>
       <CutoffCountdown />
       {!missingDismissed && (
-        <MissingDaysBanner days={missingDays} onDismiss={() => setMissingDismissed(true)} />
+        <MissingDaysBanner
+          days={missingDays}
+          onPick={(date) => {
+            setEditingTimesheet(null)
+            setNewEntryDate(date)
+            setModalOpen(true)
+          }}
+          onDismiss={() => setMissingDismissed(true)}
+        />
       )}
       {!holidayDismissed && (
         <HolidayBanner
@@ -582,6 +609,7 @@ export function Home() {
         <TimesheetModal
           timesheet={editingTimesheet}
           projects={projects}
+          defaultDate={newEntryDate ?? undefined}
           onClose={handleModalClose}
         />
       )}

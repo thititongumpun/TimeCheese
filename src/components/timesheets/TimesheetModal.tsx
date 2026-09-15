@@ -13,15 +13,17 @@ interface Props {
   timesheet: TimesheetWithProject | null
   projects: Project[]
   onClose: () => void
+  /** Prefilled date for a new entry ('YYYY-MM-DD'); ignored when editing. */
+  defaultDate?: string
 }
 
 function projectLabel(p: Project): string {
   return p.project_no ? `${p.project_no} — ${p.project_name}` : p.project_name
 }
 
-export function TimesheetModal({ timesheet, projects, onClose }: Props) {
+export function TimesheetModal({ timesheet, projects, onClose, defaultDate }: Props) {
   const [dateMemo, setDateMemo] = useState(
-    timesheet ? timesheet.date_memo.slice(0, 10) : new Date().toISOString().slice(0, 10)
+    timesheet ? timesheet.date_memo.slice(0, 10) : defaultDate ?? new Date().toISOString().slice(0, 10)
   )
   const [startTime, setStartTime] = useState(timesheet?.start_time?.slice(0, 5) ?? DAY_START)
   const [endTime, setEndTime] = useState(timesheet?.end_time?.slice(0, 5) ?? DAY_END)
@@ -255,7 +257,7 @@ export function TimesheetModal({ timesheet, projects, onClose }: Props) {
             </div>
           )}
           <div class="fieldset mb-3">
-            <label class="label" for="date_memo">Date</label>
+            <label class="label" id="date_memo-label" for="date_memo">Date</label>
             <DatePicker id="date_memo" value={dateMemo} onChange={setDateMemo} triggerClass="btn-block justify-start font-normal" />
           </div>
           <div class="grid grid-cols-2 gap-3 mb-3">

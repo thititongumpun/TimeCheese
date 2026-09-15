@@ -1,5 +1,5 @@
 import { h } from 'preact'
-import { useState } from 'preact/hooks'
+import { useRef } from 'preact/hooks'
 import 'cally'
 import { formatDate } from '../lib/formatDate'
 
@@ -17,18 +17,13 @@ interface Props {
 }
 
 export function DatePicker({ id, value, onChange, triggerClass = '', placeholder }: Props) {
-  // Forces the dropdown shut right after a day is picked — the calendar's shadow DOM
-  // makes a plain blur()-on-select unreliable, so this drives daisyui's .dropdown-close override.
-  const [closed, setClosed] = useState(false)
+  // ponytail: <details> instead of daisyui's focus-within dropdown — WebKit (macOS Safari /
+  // Tauri WKWebView) doesn't focus <button> on click, so a focus-driven dropdown never opens there.
+  const details = useRef<HTMLDetailsElement>(null)
 
   return (
-    <div class={`dropdown ${closed ? 'dropdown-close' : ''}`}>
-      <button
-        id={id}
-        type="button"
-        class={`btn ${triggerClass}`}
-        onClick={() => setClosed(false)}
-      >
+    <details class="dropdown" ref={details}>
+      <summary id={id} aria-labelledby={`${id}-label`} class={`btn ${triggerClass}`}>
         {value ? formatDate(value) : placeholder}
         {placeholder && value && (
           <span
@@ -36,6 +31,7 @@ export function DatePicker({ id, value, onChange, triggerClass = '', placeholder
             aria-label="Clear date"
             class="ml-1 opacity-60 hover:opacity-100"
             onClick={(e) => {
+              e.preventDefault()
               e.stopPropagation()
               onChange('')
             }}
@@ -43,14 +39,14 @@ export function DatePicker({ id, value, onChange, triggerClass = '', placeholder
             ✕
           </span>
         )}
-      </button>
-      <div tabIndex={0} class="dropdown-content z-10 bg-base-100 rounded-box shadow-lg p-2">
+      </summary>
+      <div class="dropdown-content z-10 bg-base-100 rounded-box shadow-lg p-2">
         <CalendarDate
           class="cally"
           value={value}
           onChange={(e: Event) => {
             onChange((e.target as HTMLInputElement).value)
-            setClosed(true)
+            if (details.current) details.current.open = false
           }}
         >
           <svg aria-label="Previous" class="size-4" slot="previous" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -62,6 +58,6 @@ export function DatePicker({ id, value, onChange, triggerClass = '', placeholder
           <CalendarMonth />
         </CalendarDate>
       </div>
-    </div>
+    </details>
   )
 }
