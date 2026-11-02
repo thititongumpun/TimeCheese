@@ -3,6 +3,22 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.24.0] - 2026-11-02
+
+### Fixed
+
+- **Send to Msync survives a slow Msync.** After Create, the filler waited a
+  fixed 4 s and then started the next record on the old form while it was
+  still closing, so record 2 often timed out. It now waits (up to 60 s) for
+  the form to leave before reopening it. Field waits went from 10 s to 30 s,
+  the start-date input is re-checked and retried up to 3 times, and a failed
+  record is retried once — never after Create was clicked, so no duplicates.
+
+### Changed
+
+- **Archived shows the newest record first** by default; the Date header still
+  toggles the order.
+
 ## [4.23.0] - 2026-09-15
 
 ### Fixed
