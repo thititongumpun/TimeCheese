@@ -725,13 +725,27 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  function waitFor(selector, timeoutMs = 10000) {
+  // 30s default: msync regularly takes >10s to render a widget after a query.
+  function waitFor(selector, timeoutMs = 30000) {
     return new Promise((resolve, reject) => {
       const t0 = Date.now();
       const tick = () => {
         const el = document.querySelector(selector);
         if (el) return resolve(el);
         if (Date.now() - t0 > timeoutMs) return reject(new Error('timeout waiting for ' + selector));
+        setTimeout(tick, 200);
+      };
+      tick();
+    });
+  }
+
+  // Inverse of waitFor — resolves once the element has left the DOM.
+  function waitGone(selector, timeoutMs = 60000) {
+    return new Promise((resolve, reject) => {
+      const t0 = Date.now();
+      const tick = () => {
+        if (!document.querySelector(selector)) return resolve();
+        if (Date.now() - t0 > timeoutMs) return reject(new Error('timeout waiting for ' + selector + ' to go away'));
         setTimeout(tick, 200);
       };
       tick();
@@ -855,28 +869,53 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
     (task.querySelector('.td') || task).click();
   }
 
+  // The datepicker may still be disabled or get reset by a late re-render on a slow msync —
+  // set, then verify the value stuck; retry a few times before giving up.
   async function setDate(row) {
-    const dateInput = await waitFor(SEL.dateInput);
-    setNativeValue(dateInput, formatDate(row.date));
-    dateInput.dispatchEvent(new Event('blur', { bubbles: true }));
-    await sleep(600);
+    const want = formatDate(row.date);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const dateInput = await waitFor(SEL.dateInput + ':not([disabled])');
+      setNativeValue(dateInput, want);
+      dateInput.dispatchEvent(new Event('blur', { bubbles: true }));
+      await sleep(600);
+      const now = document.querySelector(SEL.dateInput);
+      if (now && now.value === want) return;
+      await sleep(1000);
+    }
+    throw new Error('start date did not stick at "' + want + '"');
   }
 
   // msync loads slowly — settle time after steps that trigger backend queries.
   const STEP_WAIT = 4000;
 
-  async function fillOne(row) {
-    // After a Create the app may land back on the list page — reopen the form if so.
+  // `state.createClicked` is set right before Create is pressed so the caller never
+  // re-runs a row that may already have been filed (that would create a duplicate).
+  async function fillOne(row, state) {
+    // After a Create the app lands back on the list page — reopen the form. On a retry
+    // the form may still be open: every step below re-sets its own field, so just re-run.
+    // A failed setSelect can leave its popover open; the next setSelect click would then
+    // close it instead of opening. Blueprint 3 closes a click-interaction popover on a
+    // document-level `mousedown` outside the overlay, so fire one on body. (A synthetic
+    // Escape KeyboardEvent is a no-op: Blueprint checks `e.which === 27`, which is 0 on
+    // synthetic events, and listens via React onKeyDown inside the portal.)
+    // ponytail: one mousedown + fixed sleep, no close confirmation; if a popover still
+    // lingers, the retry fails loudly with option-not-found rather than filing wrong data.
+    if (document.querySelector('.select-popover-wrapper')) {
+      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      await sleep(300);
+    }
     if (!document.querySelector(SEL.projectTable)) {
-      (await waitFor(SEL.createTimesheetBtn, 20000)).click();
-      await waitFor(SEL.projectTable, 20000);
+      (await waitFor(SEL.createTimesheetBtn, 60000)).click();
+      await waitFor(SEL.projectTable, 60000);
       await sleep(STEP_WAIT);
     }
     await setProjectType(row);
     const search = await waitFor(SEL.projectSearch);
     setNativeValue(search, row.projectNo);
     await sleep(1000); // let the table filter
-    (await waitFor(SEL.projectRow, 15000)).click();
+    // Row clicks toggle (see clickTask) — on a retry it may already be selected; don't deselect.
+    const projectRow = await waitFor(SEL.projectRow, 15000);
+    if (!projectRow.className.includes('selected')) projectRow.click();
     await sleep(STEP_WAIT); // task query runs after project selection
     // Order (observed live): date, then times, then task LAST — earlier steps reset later ones.
     await setDate(row);
@@ -893,8 +932,13 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
       if (!create) { clickTask(row); await sleep(400); }
     }
     if (!create) throw new Error('Create never enabled — task selection not registering');
+    state.createClicked = true;
     create.click();
-    await sleep(STEP_WAIT); // submit + page settle before the next row starts
+    // Submitted only once the form is actually gone — a fixed sleep let row 2 start on the
+    // still-visible, disappearing form. If this times out the row is NOT counted as filled
+    // (conservative: we cannot tell whether msync accepted it) and the run stops.
+    await waitGone(SEL.projectTable, 60000);
+    await sleep(STEP_WAIT); // list page settle before the next row starts
   }
 
   function addButton() {
@@ -912,8 +956,18 @@ const APPSMITH_FILL_SCRIPT: &str = r#"
       let filled = 0;
       try {
         for (let i = 0; i < ROWS.length; i++) {
-          btn.textContent = 'Filling ' + (i + 1) + '/' + ROWS.length + '…';
-          await fillOne(ROWS[i]);
+          const label = 'Filling ' + (i + 1) + '/' + ROWS.length;
+          const state = { createClicked: false };
+          btn.textContent = label + '…';
+          try {
+            await fillOne(ROWS[i], state);
+          } catch (e) {
+            // One retry per row — but never after Create was clicked (duplicate risk).
+            if (state.createClicked) throw e;
+            console.warn('[timesh1t filler] retrying row ' + (i + 1), e);
+            btn.textContent = label + ' (retry)…';
+            await fillOne(ROWS[i], state);
+          }
           filled++;
           await sleep(400);
         }

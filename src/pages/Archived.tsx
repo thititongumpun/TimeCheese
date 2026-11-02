@@ -61,7 +61,7 @@ export function Archived() {
   const [endMonth, setEndMonth] = useState(currentMonth())
   const [page, setPage] = useState(0)
   const [projectFilter, setProjectFilter] = useState('')
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
