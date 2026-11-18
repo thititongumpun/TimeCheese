@@ -3,6 +3,25 @@
 All notable changes to TimeCheese are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions are git tags.
 
+## [4.25.0] - 2026-11-18
+
+### Added
+
+- **Archived entries are editable.** Each row on the Archived page has an Edit
+  button that opens the usual entry modal (description, project, date, times;
+  the time-slot check runs against that day's archived rows). The AI summary is
+  never regenerated — only the search embedding is refreshed when the
+  description text changes, and a Cloudflare failure leaves it null for
+  "Index archive" to retry. If saves are refused by RLS, apply
+  `supabase/migrations/20261118_archived_update_policy.sql`.
+- **`npm run timesheet` CLI.** `login` (session cached in
+  `~/.config/timecheese/session.json`, mode 0600), `projects`, and
+  `add --date --project [--start --end] --description-file`, which resolves the
+  project by number/name, runs the same time-slot validation as the app, and
+  inserts through the real `createTimesheet` (so the Cloudflare AI summary is
+  generated as usual). Used by the `/mfec-timesheet` skill to save a day's
+  bullets straight into Home.
+
 ## [4.24.0] - 2026-11-02
 
 ### Fixed

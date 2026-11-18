@@ -58,10 +58,10 @@ export async function fetchPreviousEntryText(): Promise<string | null> {
 }
 
 // Same-day slots for overlap/8h validation, excluding the entry being edited.
-export async function fetchDaySlots(date: string, excludeId?: string) {
+export async function fetchDaySlots(date: string, excludeId?: string, table: 'timesheets' | 'archived_timesheets' = 'timesheets') {
   const userId = await getAuthenticatedUserId()
   let query = supabase
-    .from('timesheets')
+    .from(table)
     .select('id, start_time, end_time')
     .eq('user_id', userId)
     .gte('date_memo', date)
@@ -251,6 +251,28 @@ export async function updateTimesheet(id: string, data: Partial<TimesheetInput>)
   }
 
   return supabase.from('timesheets').update(data).eq('id', id).select().single()
+}
+
+// Edit an archived row. Never touches ai_summary. Embedding is recomputed only when the
+// description changed; if the Worker fails it is nulled so "Index archive" retries later.
+export async function updateArchivedTimesheet(id: string, data: Partial<TimesheetInput>) {
+  const patch: Record<string, unknown> = { ...data }
+  if (data.description !== undefined) {
+    const { data: current } = await supabase
+      .from('archived_timesheets')
+      .select('description, ai_summary')
+      .eq('id', id)
+      .single()
+    if (current?.description !== data.description) {
+      try {
+        // Same text shape as indexMissingEmbeddings so search scores stay comparable.
+        patch.embedding = await embedText([data.description, current?.ai_summary].filter(Boolean).join('\n'))
+      } catch {
+        patch.embedding = null
+      }
+    }
+  }
+  return supabase.from('archived_timesheets').update(patch).eq('id', id).select().single()
 }
 
 export async function deleteTimesheet(id: string) {

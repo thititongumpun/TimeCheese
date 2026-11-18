@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { createTimesheet, updateTimesheet, fetchDaySlots, searchArchived, fetchPreviousEntryText, type ArchivedMatch } from '../../services/timesheets'
+import { createTimesheet, updateTimesheet, updateArchivedTimesheet, fetchDaySlots, searchArchived, fetchPreviousEntryText, type ArchivedMatch } from '../../services/timesheets'
 import { validateTimeslot, freeGaps, remainingWorkedMinutes, DAY_START, DAY_END, type Slot } from '../../lib/timeslot'
 import { checkGrammar, applyLint, type GrammarLint } from '../../lib/grammar'
 import { startRecording, type Recorder } from '../../lib/recorder'
@@ -15,13 +15,14 @@ interface Props {
   onClose: () => void
   /** Prefilled date for a new entry ('YYYY-MM-DD'); ignored when editing. */
   defaultDate?: string
+  archived?: boolean // edit a row of archived_timesheets (no AI summary refresh)
 }
 
 function projectLabel(p: Project): string {
   return p.project_no ? `${p.project_no} — ${p.project_name}` : p.project_name
 }
 
-export function TimesheetModal({ timesheet, projects, onClose, defaultDate }: Props) {
+export function TimesheetModal({ timesheet, projects, onClose, defaultDate, archived }: Props) {
   const [dateMemo, setDateMemo] = useState(
     timesheet ? timesheet.date_memo.slice(0, 10) : defaultDate ?? new Date().toISOString().slice(0, 10)
   )
@@ -206,7 +207,7 @@ export function TimesheetModal({ timesheet, projects, onClose, defaultDate }: Pr
     setError(null)
     try {
       // No-overlap + 8h/day check against the other entries on this date.
-      const { data: dayRows, error: dayError } = await fetchDaySlots(dateMemo, timesheet?.id)
+      const { data: dayRows, error: dayError } = await fetchDaySlots(dateMemo, timesheet?.id, archived ? 'archived_timesheets' : 'timesheets')
       if (dayError) {
         setError(dayError.message)
         return
@@ -226,7 +227,7 @@ export function TimesheetModal({ timesheet, projects, onClose, defaultDate }: Pr
         end_time: endTime,
       }
       const { error } = timesheet
-        ? await updateTimesheet(timesheet.id, payload)
+        ? await (archived ? updateArchivedTimesheet : updateTimesheet)(timesheet.id, payload)
         : await createTimesheet(payload)
       if (error) setError(error.message)
       else onClose()

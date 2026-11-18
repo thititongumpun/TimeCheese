@@ -22,6 +22,7 @@ import {
   fetchTimesheets,
   createTimesheet,
   updateTimesheet,
+  updateArchivedTimesheet,
   deleteTimesheet,
   searchArchived,
   getOrCreateMonthlySummary,
@@ -346,6 +347,41 @@ describe('timesheets service', () => {
     await expect(updateTimesheet('1', { description: 'New text' })).resolves.toBeDefined()
 
     expect(writeChain.update).toHaveBeenCalledWith({ description: 'New text' })
+  })
+
+  it('updateArchivedTimesheet re-embeds when the description changed and never summarizes', async () => {
+    const readChain = makeChain({ data: { description: 'Old text' }, error: null })
+    const writeChain = makeChain({ data: { id: '1' }, error: null })
+    mockFrom.mockReturnValueOnce(readChain).mockReturnValueOnce(writeChain)
+
+    await updateArchivedTimesheet('1', { description: 'New text' })
+
+    expect(mockSummarizeDescription).not.toHaveBeenCalled()
+    expect(mockEmbedText).toHaveBeenCalledWith('New text')
+    expect(mockFrom).toHaveBeenCalledWith('archived_timesheets')
+    expect(writeChain.update).toHaveBeenCalledWith({ description: 'New text', embedding: [0.1, 0.2, 0.3] })
+  })
+
+  it('updateArchivedTimesheet leaves the embedding alone when the description is unchanged', async () => {
+    const readChain = makeChain({ data: { description: 'Same' }, error: null })
+    const writeChain = makeChain({ data: { id: '1' }, error: null })
+    mockFrom.mockReturnValueOnce(readChain).mockReturnValueOnce(writeChain)
+
+    await updateArchivedTimesheet('1', { description: 'Same', start_time: '10:00' })
+
+    expect(mockEmbedText).not.toHaveBeenCalled()
+    expect(writeChain.update).toHaveBeenCalledWith({ description: 'Same', start_time: '10:00' })
+  })
+
+  it('updateArchivedTimesheet saves with a null embedding when embedding fails', async () => {
+    const readChain = makeChain({ data: { description: 'Old' }, error: null })
+    const writeChain = makeChain({ data: { id: '1' }, error: null })
+    mockFrom.mockReturnValueOnce(readChain).mockReturnValueOnce(writeChain)
+    mockEmbedText.mockRejectedValue(new Error('worker down'))
+
+    await updateArchivedTimesheet('1', { description: 'New' })
+
+    expect(writeChain.update).toHaveBeenCalledWith({ description: 'New', embedding: null })
   })
 
   it('deleteTimesheet deletes by id', async () => {

@@ -3,8 +3,10 @@ import { save } from '@tauri-apps/plugin-dialog'
 import { writeFile } from '@tauri-apps/plugin-fs'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { fetchArchivedTimesheetsInRange, searchArchived, keywordSearchArchived, indexMissingEmbeddings, type ArchivedMatch } from '../services/timesheets'
+import { fetchActiveProjects } from '../services/projects'
+import { TimesheetModal } from '../components/timesheets/TimesheetModal'
 import { ExpandableText } from '../components/ExpandableText'
-import type { TimesheetWithProject } from '../types'
+import type { TimesheetWithProject, Project } from '../types'
 import { sortByDate, type SortDir } from '../lib/sortDate'
 import { tidySummary } from '../lib/summaryText'
 import { formatDate } from '../lib/formatDate'
@@ -72,6 +74,9 @@ export function Archived() {
   const [indexing, setIndexing] = useState(false)
   const [indexMsg, setIndexMsg] = useState('')
 
+  const [projects, setProjects] = useState<Project[]>([])
+  const [editing, setEditing] = useState<TimesheetWithProject | null>(null)
+
   const { from, to } = periodRange(startMonth, endMonth)
 
   async function handleSearch(e: Event) {
@@ -113,9 +118,13 @@ export function Archived() {
   }
 
   useEffect(() => {
+    fetchActiveProjects().then(({ data }) => setProjects((data as Project[]) ?? []))
+  }, [])
+
+  function reload(resetPage = true) {
     setLoading(true)
     setError(null)
-    setPage(0)
+    if (resetPage) setPage(0)
     fetchArchivedTimesheetsInRange(from, to).then(({ data, error }) => {
       if (error) setError(error.message)
       else {
@@ -127,7 +136,9 @@ export function Archived() {
       }
       setLoading(false)
     })
-  }, [startMonth, endMonth])
+  }
+
+  useEffect(() => { reload() }, [startMonth, endMonth])
 
   // Self-healing: embed any newly-archived rows on open. No-op (one cheap query) when nothing's missing.
   // Silent unless it actually indexes something; the button stays for the initial bulk run / manual retry.
@@ -195,6 +206,14 @@ export function Archived() {
 
   return (
     <div>
+      {editing && (
+        <TimesheetModal
+          archived
+          timesheet={editing}
+          projects={projects}
+          onClose={() => { setEditing(null); reload(false) }}
+        />
+      )}
       {copiedId && (
         <div class="toast toast-end toast-bottom z-50">
           <div class="alert alert-success" role="status">
@@ -376,6 +395,7 @@ export function Archived() {
                       >
                         {copiedId === t.id ? 'Copied' : 'Copy AI'}
                       </button>
+                      <button class="btn btn-ghost btn-xs" onClick={() => setEditing(t)}>Edit</button>
                     </td>
                   </tr>
                 ))}
